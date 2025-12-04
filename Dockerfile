@@ -14,6 +14,12 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Instalar OpenSSL y dependencias para Prisma
+RUN apt-get update && \
+    apt-get install -y openssl libssl3 libssl-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -25,6 +31,8 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 ENV NEXT_PUBLIC_API_URL="http://localhost:3000"
 # Deshabilitar generación estática (la BD no está disponible durante build)
 ENV SKIP_BUILD_STATIC_GENERATION=1
+# Forzar a Prisma a usar el binario correcto para Debian
+ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 
 # Generate Prisma Client
 RUN npx prisma generate
