@@ -1,0 +1,21 @@
+[
+  {
+    "id": "ACT-1764682530714-943",
+    "type": "order_created",
+    "description": "Nueva orden de Juan Pérez",
+    "metadata": {
+      "orderId": "ORD-1764682530713-200",
+      "total": 135000
+    },
+    "timestamp": "2025-12-02T13:35:30.714Z"
+  },
+  {
+    "id": "ACT-1764681390205-79",
+    "type": "product_updated",
+    "description": "Producto actualizado: Yerba Mate Orgánica MATELOCO",
+    "metadata": {
+      "productId": 3
+    },
+    "timestamp": "2025-12-02T13:16:30.205Z"
+  }
+]

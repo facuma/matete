@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "name": "Mate Imperial Premium",
+    "price": 45000,
+    "category": "Mates",
+    "imageSeed": 101,
+    "description": "Mate de calabaza seleccionada forrado en cuero vacuno legítimo. Virola de alpaca cincelada a mano.",
+    "featured": true,
+    "rating": 5
+  },
+  {
+    "id": 2,
+    "name": "Bombilla Pico de Loro",
+    "price": 12500,
+    "category": "Bombillas",
+    "imageSeed": 202,
+    "description": "Acero inoxidable de alta calidad. Filtrado ranurado ideal para yerbas finas.",
+    "featured": false,
+    "rating": 4.8
+  },
+  {
+    "id": 3,
+    "name": "Yerba Mate Orgánica MATELOCO",
+    "price": 4200,
+    "category": "Yerbas",
+    "imageSeed": 303,
+    "description": "Cosecha limitada. Sabor suave, estacionamiento natural de 24 meses. Sin agrotóxicos.",
+    "featured": true,
+    "rating": 5
+  },
+  {
+    "id": 4,
+    "name": "Termo Media Manija",
+    "price": 68000,
+    "category": "Accesorios",
+    "imageSeed": 404,
+    "description": "1 Litro. Acero inoxidable doble capa. Mantiene el agua caliente por 24hs.",
+    "featured": true,
+    "rating": 4.9
+  },
+  {
+    "id": 5,
+    "name": "Mate Camionero Algarrobo",
+    "price": 28000,
+    "category": "Mates",
+    "imageSeed": 505,
+    "description": "Madera de algarrobo torneada, boca ancha ideal para montañita.",
+    "featured": false,
+    "rating": 4.7
+  },
+  {
+    "id": 6,
+    "name": "Set Matera de Cuero",
+    "price": 85000,
+    "category": "Accesorios",
+    "imageSeed": 606,
+    "description": "Bolso matero 100% cuero rígido. Incluye yerbera y azucarera haciendo juego.",
+    "featured": false,
+    "rating": 5
+  }
+]

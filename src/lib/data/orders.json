@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ORD-1764682530713-200",
+    "customer": {
+      "name": "Juan Pérez",
+      "email": "juan@test.com",
+      "address": "Calle Falsa 123",
+      "city": "Resistencia, Chaco"
+    },
+    "items": [
+      {
+        "id": 1,
+        "name": "Mate Imperial Premium",
+        "price": 45000,
+        "quantity": 3
+      }
+    ],
+    "total": 135000,
+    "paymentMethod": "card",
+    "paymentDetails": {
+      "cardLast4": "9012"
+    },
+    "status": "Procesando",
+    "date": "2025-12-02T13:35:30.713Z"
+  }
+]

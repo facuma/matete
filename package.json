@@ -1,0 +1,41 @@
+{
+  "name": "matete-website",
+  "version": "0.1.0",
+  "private": true,
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:studio": "prisma studio",
+    "prisma:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@mercadopago/sdk-react": "^1.0.6",
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3",
+    "lucide-react": "^0.395.0",
+    "mercadopago": "^2.11.0",
+    "next": "^16.0.6",
+    "next-auth": "^4.24.13",
+    "pg": "^8.16.3",
+    "prisma": "^6.19.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-quill-new": "^3.6.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0-alpha.17",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17"
+  }
+}
