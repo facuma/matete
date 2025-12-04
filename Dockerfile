@@ -16,11 +16,19 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Variables de entorno para evitar problemas de compilación
+ENV NEXT_TELEMETRY_DISABLED=1
+# DATABASE_URL dummy para build (Prisma necesita validar el schema)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+# API URL dummy para build
+ENV NEXT_PUBLIC_API_URL="http://localhost:3000"
+# Deshabilitar generación estática (la BD no está disponible durante build)
+ENV SKIP_BUILD_STATIC_GENERATION=1
+
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Build Next.js
-ENV NEXT_TELEMETRY_DISABLED 1
+# Build Next.js (versión 15 usa webpack por defecto, no Turbopack)
 RUN npm run build
 
 # Production image, copy all the files and run next

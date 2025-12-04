@@ -17,32 +17,7 @@ export default async function sitemap() {
         priority: route === '' ? 1 : 0.8,
     }));
 
-    // Dynamic routes: Products
-    const products = await prisma.product.findMany({
-        select: { slug: true, updatedAt: true },
-    });
-
-    const productRoutes = products.map((product) => ({
-        url: `${baseUrl}/productos/${product.slug}`,
-        lastModified: product.updatedAt,
-        changeFrequency: 'daily',
-        priority: 0.9,
-    }));
-
-    // Dynamic routes: Blog Posts
-    const posts = await prisma.post.findMany({
-        where: { published: true },
-        select: { slug: true, updatedAt: true },
-    });
-
-    const postRoutes = posts.map((post) => ({
-        url: `${baseUrl}/blog/${post.slug}`,
-        lastModified: post.updatedAt,
-        changeFrequency: 'weekly',
-        priority: 0.7,
-    }));
-
-    // Dynamic routes: Categories (Hardcoded for now based on known categories)
+    // Categories (Hardcoded)
     const categories = ['mates', 'bombillas', 'yerbas', 'termos', 'accesorios'];
     const categoryRoutes = categories.map((cat) => ({
         url: `${baseUrl}/categorias/${cat}`,
@@ -50,6 +25,45 @@ export default async function sitemap() {
         changeFrequency: 'weekly',
         priority: 0.8,
     }));
+
+    // Try to fetch dynamic routes, but don't fail if DB is not available (during build)
+    let productRoutes = [];
+    let postRoutes = [];
+
+    try {
+        // Dynamic routes: Products
+        const products = await prisma.product.findMany({
+            select: { slug: true, updatedAt: true },
+        });
+
+        productRoutes = products.map((product) => ({
+            url: `${baseUrl}/productos/${product.slug}`,
+            lastModified: product.updatedAt,
+            changeFrequency: 'daily',
+            priority: 0.9,
+        }));
+    } catch (error) {
+        // DB not available during build - skip dynamic product routes
+        console.log('Skipping product routes in sitemap (DB not available)');
+    }
+
+    try {
+        // Dynamic routes: Blog Posts
+        const posts = await prisma.post.findMany({
+            where: { published: true },
+            select: { slug: true, updatedAt: true },
+        });
+
+        postRoutes = posts.map((post) => ({
+            url: `${baseUrl}/blog/${post.slug}`,
+            lastModified: post.updatedAt,
+            changeFrequency: 'weekly',
+            priority: 0.7,
+        }));
+    } catch (error) {
+        // DB not available during build - skip dynamic post routes
+        console.log('Skipping post routes in sitemap (DB not available)');
+    }
 
     return [...routes, ...categoryRoutes, ...productRoutes, ...postRoutes];
 }
