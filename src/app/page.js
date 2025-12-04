@@ -1,6 +1,8 @@
 import HomePageClient from '@/components/HomePageClient';
 
-export const revalidate = 3600; // Revalidate every hour
+// Forzar rendering dinámico (no static generation) para evitar SIGILL durante build
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getProducts() {
   try {
