@@ -1,5 +1,5 @@
-# Dockerfile for Next.js App
-FROM node:20-slim AS base
+# Dockerfile for Next.js App - Compatible con CPUs antiguos
+FROM node:16-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
