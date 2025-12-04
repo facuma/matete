@@ -1,40 +1,74 @@
 version: '3.8'
 
 services:
-  db:
+  # Base de datos PostgreSQL
+  postgres:
     image: postgres:15-alpine
-    container_name: matete_db
-    restart: always
+    container_name: matete_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: matete
-      POSTGRES_PASSWORD: matete123
-      POSTGRES_DB: matete_db
+      POSTGRES_USER: ${POSTGRES_USER:-matete}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-matete123}
+      POSTGRES_DB: ${POSTGRES_DB:-matete_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U matete"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-matete}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - matete_network
 
-  app:
+  # Frontend Next.js
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: matete_app
-    restart: always
+      args:
+        - NODE_ENV=production
+    container_name: matete_frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: "postgresql://matete:matete123@db:5432/matete_db"
-      NEXT_PUBLIC_API_URL: "http://localhost:3000"
-      NODE_ENV: "production"
+      # Database
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-matete}:${POSTGRES_PASSWORD:-matete123}@postgres:5432/${POSTGRES_DB:-matete_db}"
+      
+      # Next.js
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # MercadoPago (si aplica)
+      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
+      
+      # Production mode
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node server.js"
+    networks:
+      - matete_network
+    # Ejecutar migraciones antes de iniciar el servidor
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        npx prisma migrate deploy --schema=/app/prisma/schema.prisma
+        npx prisma db seed
+        node server.js
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  matete_network:
+    driver: bridge
