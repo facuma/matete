@@ -29,7 +29,9 @@
     "react": "^18",
     "react-dom": "^18",
     "react-quill-new": "^3.6.0",
+    "resend": "^6.5.2",
     "sharp": "^0.33.5",
+    "sonner": "^2.0.7",
     "zod": "^4.1.13"
   },
   "devDependencies": {
