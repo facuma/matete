@@ -45,6 +45,10 @@ export async function POST(request) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
         // Create user
         const user = await prisma.user.create({
             data: {
@@ -55,9 +59,29 @@ export async function POST(request) {
                 dni,
                 phone,
                 address,
-                city
+                city,
+                verificationCode,
+                verificationCodeExpires,
+                emailVerified: null // Explicitly null
             }
         });
+
+        // Send verification email
+        const { sendVerificationEmail } = await import("@/lib/email");
+        await sendVerificationEmail({
+            to: email,
+            name,
+            code: verificationCode
+        });
+
+        return NextResponse.json(
+            {
+                message: "Usuario creado. Por favor verifica tu email.",
+                requireVerification: true,
+                email: user.email
+            },
+            { status: 201 }
+        );
 
         return NextResponse.json(
             {

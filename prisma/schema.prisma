@@ -114,6 +114,10 @@ model User {
   sessions      Session[]
   orders        Order[]   @relation("UserOrders")
   posts         Post[]
+  
+  emailVerified DateTime?
+  verificationCode String?
+  verificationCodeExpires DateTime?
 
   @@map("users")
 }
