@@ -4,6 +4,14 @@ import { logActivity } from '@/lib/admin-utils';
 
 export async function POST(request) {
     try {
+        const { getServerSession } = await import("next-auth");
+        const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const body = await request.json();
         const { orderId } = body;
 
@@ -22,6 +30,14 @@ export async function POST(request) {
             return NextResponse.json({
                 error: 'Order not found'
             }, { status: 404 });
+        }
+
+        // Verify ownership (or admin)
+        const isAdmin = session.user.role === 'admin';
+        const isOwner = order.userId === session.user.id;
+
+        if (!isAdmin && !isOwner) {
+            return NextResponse.json({ error: "Forbidden: You can only cancel your own orders" }, { status: 403 });
         }
 
         // Check if already canceled

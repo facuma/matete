@@ -22,12 +22,28 @@ export async function POST(request) {
             }
         }
 
-        // Force status security check
-        // If payment method is transfer, force 'Pendiente'
-        // If card, we ideally verify, but for now allow 'Procesando' or 'Pagado' if MP confirms (legacy trusted client for now, but safer to default)
-        // Ideally: validStatus = 'Procesando' or 'Pendiente'. 'Pagado' should only come from webhooks.
-        // For this refactor, I will trust the body.status for 'Pagado' ONLY if it provides mpPaymentId, otherwise default to Pending.
-        // But to minimize breakage in this task, I will accept the body params but at least we moved it out of /admin path.
+        // Secure userId assignment
+        const { getServerSession } = await import("next-auth");
+        const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+        const session = await getServerSession(authOptions);
+
+        // If user is logged in, attach order to them. If not, it's a guest order (userId: null).
+        // We IGNORE body.userId to prevent spoofing.
+        const secureUserId = session?.user?.id || null;
+
+        // Secure Status logic
+        // Prevent clients from forcing "Pagado" without a valid payment ID (basic check)
+        let secureStatus = body.status || 'Procesando';
+        if (body.paymentMethod === 'transfer') {
+            secureStatus = 'Pendiente';
+        } else if (body.paymentMethod === 'card') {
+            // Only allow 'Pagado' if we have an external payment ID
+            if (body.mercadopagoPaymentId && (body.status === 'Pagado' || body.status === 'approved')) {
+                secureStatus = 'Pagado';
+            } else {
+                secureStatus = 'Procesando';
+            }
+        }
 
         const newOrder = await prisma.order.create({
             data: {
@@ -39,18 +55,17 @@ export async function POST(request) {
                 total: body.total,
                 paymentMethod: body.paymentMethod || 'card',
                 paymentDetails: body.paymentDetails || null,
-                status: body.status || (body.paymentMethod === 'transfer' ? 'Pendiente' : 'Procesando'),
+                status: secureStatus,
                 shippingMethod: body.shippingMethod || null,
                 shippingCost: body.shippingCost || 0,
                 mercadopagoPaymentId: body.mercadopagoPaymentId || null,
                 mpPaymentStatus: body.mpPaymentStatus || null,
-                userId: body.userId || null,
+                userId: secureUserId,
                 discountCode: body.discountCode || null
             }
         });
 
         // Log activity (as system/public event)
-        // We might want to skip logActivity for public if it requires auth, but logActivity uses internal prisma call mostly.
         try {
             await logActivity('order_created', `Nueva orden pública de ${newOrder.customerName}`, {
                 orderId: newOrder.id,
@@ -94,10 +109,6 @@ export async function POST(request) {
                         });
 
                         if (!product) continue;
-
-                        // Check available stock (considering reserved) is complicated without race conditions, 
-                        // effectively we just want to ensure we don't oversell too much.
-                        // Ideally we increment reservedStock here.
 
                         await tx.product.update({
                             where: { id: item.id },
