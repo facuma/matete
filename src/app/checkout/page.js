@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/contexts/cart-context';
 import Button from '@/components/ui/Button';
-import { MapPin, CheckCircle, Loader2, LogIn, CreditCard, Building2, Copy } from 'lucide-react';
+import { MapPin, CheckCircle, Loader2, LogIn, CreditCard, Building2, Copy, Truck, AlertCircle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import MercadoPagoBrick from '@/components/MercadoPagoBrick';
 import AuthModal from '@/components/auth/AuthModal';
 import { event } from '@/components/FacebookPixel';
+import ShippingSelector from '@/components/checkout/ShippingSelector';
 
 export default function CheckoutPage() {
     const router = useRouter();
@@ -18,12 +19,19 @@ export default function CheckoutPage() {
     const [preferenceId, setPreferenceId] = useState(null);
     const [loadingPreference, setLoadingPreference] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [selectedMethod, setSelectedMethod] = useState('mercadopago'); // 'mercadopago' | 'transfer'
+    const mpAvailable = !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+    const [selectedMethod, setSelectedMethod] = useState(mpAvailable ? 'mercadopago' : 'transfer'); // 'mercadopago' | 'transfer'
     const [showPaymentContent, setShowPaymentContent] = useState(false); // To control when to show the actual payment content (brick or details)
     const [discountCode, setDiscountCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState(null);
     const [discountError, setDiscountError] = useState('');
     const [validatingDiscount, setValidatingDiscount] = useState(false);
+
+    // Stock reservation and shipping
+    const [selectedShipping, setSelectedShipping] = useState(null);
+    const [reservationIds, setReservationIds] = useState([]);
+    const [stockError, setStockError] = useState(null);
+    const [reservingStock, setReservingStock] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -55,6 +63,55 @@ export default function CheckoutPage() {
         }
     }, [cart.length, cartTotal]);
 
+    // Validate stock availability on checkout load
+    useEffect(() => {
+        const validateStock = async () => {
+            if (cart.length === 0) return;
+
+            try {
+                const response = await fetch('/api/products');
+                if (!response.ok) {
+                    console.error('Failed to fetch products for stock validation');
+                    return;
+                }
+                const products = await response.json();
+
+                if (!Array.isArray(products)) {
+                    console.error('Invalid products response:', products);
+                    return;
+                }
+
+                const stockIssues = [];
+
+                for (const cartItem of cart) {
+                    const product = products.find(p => p.id === cartItem.id);
+                    if (!product) continue;
+
+                    const availableStock = (product.stock || 0) - (product.reservedStock || 0);
+
+                    if (availableStock < cartItem.quantity) {
+                        stockIssues.push({
+                            name: product.name,
+                            available: availableStock
+                        });
+                    }
+                }
+
+                if (stockIssues.length > 0) {
+                    const message = 'Algunos productos no tienen stock suficiente:\n\n' +
+                        stockIssues.map(i => `${i.name}: ${i.available} disponibles`).join('\n');
+
+                    alert(message + '\n\nSerás redirigido al carrito.');
+                    router.push('/shop');
+                }
+            } catch (error) {
+                console.error('Error validating stock:', error);
+            }
+        };
+
+        validateStock();
+    }, [cart, router]);
+
     // Pre-fill from session if available
     useEffect(() => {
         if (session?.user) {
@@ -75,8 +132,76 @@ export default function CheckoutPage() {
         localStorage.setItem('checkoutFormData', JSON.stringify(formData));
     }, [formData]);
 
+    // Stock reservation functions
+    const getCookieId = () => {
+        let cookieId = localStorage.getItem('checkout_cookie_id');
+        if (!cookieId) {
+            cookieId = 'ck_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('checkout_cookie_id', cookieId);
+        }
+        return cookieId;
+    };
+
+    // Stock reservation is now handled by the backend when creating the order
+    // Keeping these functions commented for reference
+    /*
+    const reserveStock = async () => {
+        setReservingStock(true);
+        setStockError(null);
+        try {
+            const response = await fetch('/api/stock/reserve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: cart.map(item => ({
+                        productId: item.id,
+                        quantity: item.quantity
+                    })),
+                    sessionId: session?.user?.id || null,
+                    cookieId: getCookieId()
+                })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                setStockError('Algunos productos no tienen stock suficiente');
+            } else {
+                setReservationIds(data.reservations.map(r => r.reservationId));
+            }
+        } catch (error) {
+            console.error('Error reserving stock:', error);
+            setStockError('Error al reservar stock. Por favor intentá nuevamente.');
+        } finally {
+            setReservingStock(false);
+        }
+    };
+
+    const releaseStock = async () => {
+        if (reservationIds.length === 0) return;
+
+        try {
+            await fetch('/api/stock/release', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservationIds })
+            });
+        } catch (error) {
+            console.error('Error releasing stock:', error);
+        }
+    };
+    */
+
     const createOrder = async (paymentId, status, method = 'mercadopago') => {
         try {
+            // Calculate final total with shipping
+            let finalTotal = appliedDiscount
+                ? cartTotal * (1 - appliedDiscount.percentage / 100)
+                : cartTotal;
+
+            if (selectedShipping) {
+                finalTotal += selectedShipping.price;
+            }
+
             const orderData = {
                 customer: {
                     name: formData.name,
@@ -93,15 +218,22 @@ export default function CheckoutPage() {
                     quantity: item.quantity,
                     options: item.selectedOptions
                 })),
-                total: appliedDiscount ? cartTotal * (1 - appliedDiscount.percentage / 100) : cartTotal,
+                total: finalTotal,
+                shippingMethod: selectedShipping?.name || null,
+                shippingCost: selectedShipping?.price || 0,
+                mercadopagoPaymentId: method === 'mercadopago' ? paymentId : null,
                 paymentMethod: method,
-                paymentDetails: { paymentId, email: formData.email },
+                paymentDetails: {
+                    paymentId,
+                    email: formData.email,
+                    reservationIds: reservationIds // Store for webhook processing
+                },
                 status: status,
                 userId: session?.user?.id || null,
                 discountCode: appliedDiscount ? appliedDiscount.code : null
             };
 
-            const response = await fetch('/api/admin/orders', {
+            const response = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
@@ -109,6 +241,19 @@ export default function CheckoutPage() {
 
             if (response.ok) {
                 const newOrder = await response.json();
+
+                // Decrement stock if payment approved immediately
+                if (status === 'Pagado' && reservationIds.length > 0) {
+                    try {
+                        await fetch('/api/stock/decrement', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reservationIds })
+                        });
+                    } catch (error) {
+                        console.error('Error decrementing stock:', error);
+                    }
+                }
 
                 // Facebook Pixel: Purchase
                 event('Purchase', {
@@ -121,6 +266,7 @@ export default function CheckoutPage() {
 
                 clearCart();
                 localStorage.removeItem('checkoutFormData');
+                localStorage.removeItem('checkout_cookie_id');
                 router.push(`/checkout/success?orderId=${newOrder.id}&method=${method}`);
             } else {
                 throw new Error('Failed to create order');
@@ -194,11 +340,17 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!selectedShipping) {
+            alert('Por favor seleccioná un método de envío.');
+            return;
+        }
+
         if (!session) {
             setIsAuthModalOpen(true);
             return;
         }
 
+        // Stock reservation is now handled by backend when creating order
         setShowPaymentContent(true);
 
         if (selectedMethod === 'mercadopago') {
@@ -214,6 +366,15 @@ export default function CheckoutPage() {
     const handleLoadBrick = async () => {
         setLoadingPreference(true);
         try {
+            // Calculate total with shipping
+            let total = appliedDiscount
+                ? cartTotal * (1 - appliedDiscount.percentage / 100)
+                : cartTotal;
+
+            if (selectedShipping) {
+                total += selectedShipping.price;
+            }
+
             const response = await fetch('/api/mercadopago/preference', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -228,7 +389,7 @@ export default function CheckoutPage() {
                             city: formData.city
                         }
                     },
-                    total: appliedDiscount ? cartTotal * (1 - appliedDiscount.percentage / 100) : cartTotal
+                    total
                 }),
             });
 
@@ -291,6 +452,25 @@ export default function CheckoutPage() {
                     >
                         Iniciar Sesión / Registrarse
                     </Button>
+                </div>
+            )}
+
+            {/* Stock Error Alert */}
+            {stockError && (
+                <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                    <AlertCircle className="text-red-600" size={24} />
+                    <div>
+                        <h3 className="font-bold text-red-900">Error de Stock</h3>
+                        <p className="text-red-700 text-sm">{stockError}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Reserving Stock Loader */}
+            {reservingStock && (
+                <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3">
+                    <Loader2 className="animate-spin text-blue-600" size={24} />
+                    <p className="text-blue-700 text-sm">Reservando stock...</p>
                 </div>
             )}
 
@@ -375,26 +555,43 @@ export default function CheckoutPage() {
                         </div>
                     </div>
 
+                    {/* Shipping Method Selection */}
+                    <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-100">
+                        <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
+                            <Truck size={20} /> Método de Envío
+                        </h2>
+                        <ShippingSelector
+                            selectedOption={selectedShipping}
+                            onSelect={(option) => {
+                                setSelectedShipping(option);
+                                setShowPaymentContent(false); // Reset payment if shipping changes
+                                setPreferenceId(null);
+                            }}
+                        />
+                    </div>
+
                     {/* Payment Method Selection */}
                     <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-100">
                         <h2 className="font-bold text-xl mb-6">Método de Pago</h2>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedMethod('mercadopago');
-                                    setShowPaymentContent(false);
-                                    setPreferenceId(null);
-                                }}
-                                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${selectedMethod === 'mercadopago'
-                                    ? 'border-[#009EE3] bg-[#009EE3]/5 text-[#009EE3]'
-                                    : 'border-stone-200 hover:border-stone-300 text-stone-600'
-                                    }`}
-                            >
-                                <CreditCard size={24} />
-                                <span className="font-medium text-sm">Mercado Pago</span>
-                            </button>
+                        <div className={`grid ${mpAvailable ? 'grid-cols-2' : 'grid-cols-1'} gap-4 mb-6`}>
+                            {mpAvailable && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedMethod('mercadopago');
+                                        setShowPaymentContent(false);
+                                        setPreferenceId(null);
+                                    }}
+                                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${selectedMethod === 'mercadopago'
+                                        ? 'border-[#009EE3] bg-[#009EE3]/5 text-[#009EE3]'
+                                        : 'border-stone-200 hover:border-stone-300 text-stone-600'
+                                        }`}
+                                >
+                                    <CreditCard size={24} />
+                                    <span className="font-medium text-sm">Mercado Pago</span>
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -544,9 +741,19 @@ export default function CheckoutPage() {
                                 <span>-${(cartTotal * (appliedDiscount.percentage / 100)).toLocaleString('es-AR')}</span>
                             </div>
                         )}
+                        {selectedShipping && (
+                            <div className="flex justify-between text-stone-600">
+                                <span>Envío ({selectedShipping.name})</span>
+                                <span>{selectedShipping.price === 0 ? 'Gratis' : `$${selectedShipping.price.toLocaleString('es-AR')}`}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-xl font-bold text-[#1a1a1a] pt-2 border-t border-stone-200">
                             <span>Total</span>
-                            <span>${(appliedDiscount ? cartTotal * (1 - appliedDiscount.percentage / 100) : cartTotal).toLocaleString('es-AR')}</span>
+                            <span>${(() => {
+                                let total = appliedDiscount ? cartTotal * (1 - appliedDiscount.percentage / 100) : cartTotal;
+                                if (selectedShipping) total += selectedShipping.price;
+                                return total.toLocaleString('es-AR');
+                            })()}</span>
                         </div>
 
                         {/* Discount Code Input */}

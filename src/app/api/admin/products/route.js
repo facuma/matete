@@ -39,6 +39,7 @@ export async function POST(request) {
                 slug: body.slug || body.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
                 metaTitle: body.metaTitle,
                 metaDescription: body.metaDescription,
+                stock: parseInt(body.stock) || 0,
                 options: {
                     create: body.options?.map(opt => ({
                         name: opt.name,
@@ -92,7 +93,8 @@ export async function PUT(request) {
                     imageUrl: body.imageUrl,
                     slug: body.slug,
                     metaTitle: body.metaTitle,
-                    metaDescription: body.metaDescription
+                    metaDescription: body.metaDescription,
+                    stock: parseInt(body.stock) || 0
                 }
             });
 

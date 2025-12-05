@@ -17,7 +17,9 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         options: [],
         slug: '',
         metaTitle: '',
-        metaDescription: ''
+        metaDescription: '',
+        stock: 0,
+        lowStockThreshold: 5
     });
     const [uploading, setUploading] = useState(false);
     const [inputType, setInputType] = useState('upload'); // 'upload' or 'url'
@@ -36,7 +38,9 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 options: product.options || [],
                 slug: product.slug || '',
                 metaTitle: product.metaTitle || '',
-                metaDescription: product.metaDescription || ''
+                metaDescription: product.metaDescription || '',
+                stock: product.stock || 0,
+                lowStockThreshold: product.lowStockThreshold || 5
             });
         } else {
             setFormData({
@@ -52,7 +56,9 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 options: [],
                 slug: '',
                 metaTitle: '',
-                metaDescription: ''
+                metaDescription: '',
+                stock: 0,
+                lowStockThreshold: 5
             });
         }
     }, [product, isOpen]);
@@ -178,6 +184,67 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                                 <option value="Yerbas">Yerbas</option>
                                 <option value="Accesorios">Accesorios</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">
+                                Stock Total *
+                            </label>
+                            <input
+                                type="number"
+                                required
+                                min="0"
+                                value={formData.stock}
+                                onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                                className="w-full p-3 rounded-lg border border-stone-200 focus:border-stone-800 focus:ring-1 focus:ring-stone-800 outline-none"
+                                placeholder="100"
+                            />
+                            <div className="flex justify-between items-center text-xs text-stone-500 mt-1 mb-2">
+                                <span>Cantidad total en inventario</span>
+                            </div>
+
+                            <label className="block text-sm font-medium text-stone-700 mb-1">
+                                Umbral de Alerta de Stock Bajo
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={formData.lowStockThreshold}
+                                onChange={(e) => setFormData({ ...formData, lowStockThreshold: parseInt(e.target.value) || 5 })}
+                                className="w-full p-3 rounded-lg border border-stone-200 focus:border-stone-800 focus:ring-1 focus:ring-stone-800 outline-none"
+                                placeholder="5"
+                            />
+                            <p className="text-xs text-stone-500 mt-1 mb-3">Se mostrará alerta amarilla cuando el stock disponible sea menor o igual a este número.</p>
+
+                            {product && (
+                                <div className="mt-2 space-y-1 pt-3 border-t border-stone-100">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-stone-500">Stock Reservado:</span>
+                                        <span className="font-semibold text-amber-600">{product.reservedStock || 0} unid.</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-stone-500">Stock Disponible:</span>
+                                        <span className={`font-semibold ${(formData.stock - (product.reservedStock || 0)) <= 0
+                                            ? 'text-red-600'
+                                            : (formData.stock - (product.reservedStock || 0)) <= (product.lowStockThreshold || 5)
+                                                ? 'text-amber-600'
+                                                : 'text-green-600'
+                                            }`}>
+                                            {formData.stock - (product.reservedStock || 0)} unid.
+                                        </span>
+                                    </div>
+                                    {(formData.stock - (product.reservedStock || 0)) <= (product.lowStockThreshold || 5) && (
+                                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                            {(formData.stock - (product.reservedStock || 0)) <= 0
+                                                ? '⚠️ ¡Sin stock disponible! Los usuarios no podrán comprar este producto.'
+                                                : '⚠️ Stock bajo. Considera reabastecer pronto.'}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {!product && (
+                                <p className="text-xs text-stone-500 mt-1">Cantidad total en inventario</p>
+                            )}
                         </div>
                     </div>
 

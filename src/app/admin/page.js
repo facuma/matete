@@ -93,25 +93,25 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <StatCard
           title="Ventas Totales"
-          value={`$${metrics.totalSales.toLocaleString('es-AR')}`}
+          value={`$${(metrics.totalSales || 0).toLocaleString('es-AR')}`}
           icon={DollarSign}
           color="text-green-500"
         />
         <StatCard
           title="Nuevas Órdenes"
-          value={metrics.newOrders}
+          value={metrics.newOrders || 0}
           icon={ShoppingCart}
           color="text-blue-500"
         />
         <StatCard
           title="Productos Activos"
-          value={metrics.totalProducts}
+          value={metrics.totalProducts || 0}
           icon={Package}
           color="text-amber-500"
         />
         <StatCard
           title="Clientes Totales"
-          value={metrics.totalCustomers}
+          value={metrics.totalCustomers || 0}
           icon={Users}
           color="text-violet-500"
         />

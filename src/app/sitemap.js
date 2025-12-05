@@ -10,6 +10,10 @@ export default async function sitemap() {
         '/blog',
         '/about',
         '/contact',
+        '/terminos',
+        '/privacidad',
+        '/cambios-devoluciones',
+        '/my-orders',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Search, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Package } from 'lucide-react';
+import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import { getProductImage } from '@/lib/utils';
 import ProductFormModal from '@/components/admin/ProductFormModal';
@@ -34,10 +35,46 @@ export default function AdminProductsPage() {
       const res = await fetch('/api/admin/products');
       const data = await res.json();
       setProducts(data);
+      checkStockAlerts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Error al cargar productos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkStockAlerts = (productsList) => {
+    const outOfStock = productsList.filter(p => (p.stock - (p.reservedStock || 0)) <= 0);
+    const lowStock = productsList.filter(p => {
+      const available = p.stock - (p.reservedStock || 0);
+      return available > 0 && available <= (p.lowStockThreshold || 5);
+    });
+
+    if (outOfStock.length > 0) {
+      toast.error(
+        <div className="flex flex-col gap-1">
+          <span className="font-bold">⚠️ {outOfStock.length} Productos Sin Stock</span>
+          <span className="text-xs">
+            {outOfStock.slice(0, 3).map(p => p.name).join(', ')}
+            {outOfStock.length > 3 && ` y ${outOfStock.length - 3} más`}
+          </span>
+        </div>,
+        { duration: 6000 }
+      );
+    }
+
+    if (lowStock.length > 0) {
+      toast.warning(
+        <div className="flex flex-col gap-1">
+          <span className="font-bold">⚠️ {lowStock.length} Productos con Poco Stock</span>
+          <span className="text-xs">
+            {lowStock.slice(0, 3).map(p => p.name).join(', ')}
+            {lowStock.length > 3 && ` y ${lowStock.length - 3} más`}
+          </span>
+        </div>,
+        { duration: 6000 }
+      );
     }
   };
 
@@ -135,6 +172,9 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
+      {/* Stock Alerts Summary */}
+      {/* Stock alerts are now shown as Toasts via checkStockAlerts function */}
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,6 +212,7 @@ export default function AdminProductsPage() {
               <th className="p-4 font-semibold text-sm">Producto</th>
               <th className="p-4 font-semibold text-sm">Categoría</th>
               <th className="p-4 font-semibold text-sm">Precio</th>
+              <th className="p-4 font-semibold text-sm">Stock</th>
               <th className="p-4 font-semibold text-sm">Destacado</th>
               <th className="p-4 font-semibold text-sm">Acciones</th>
             </tr>
@@ -179,7 +220,7 @@ export default function AdminProductsPage() {
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan="7" className="p-8 text-center text-stone-400">
+                <td colSpan="8" className="p-8 text-center text-stone-400">
                   No se encontraron productos
                 </td>
               </tr>
@@ -199,6 +240,34 @@ export default function AdminProductsPage() {
                   <td className="p-4 font-medium text-stone-800">{product.name}</td>
                   <td className="p-4 text-stone-600">{product.category}</td>
                   <td className="p-4 text-stone-600">${product.price.toLocaleString('es-AR')}</td>
+                  <td className="p-4">
+                    {(() => {
+                      const availableStock = product.stock - (product.reservedStock || 0);
+                      const isLowStock = availableStock <= product.lowStockThreshold;
+                      const isOutOfStock = availableStock <= 0;
+
+                      return (
+                        <div className="flex items-center gap-2">
+                          {isOutOfStock ? (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
+                              <AlertTriangle size={12} />
+                              Sin Stock
+                            </span>
+                          ) : isLowStock ? (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 flex items-center gap-1">
+                              <AlertTriangle size={12} />
+                              {availableStock} unid.
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1">
+                              <Package size={12} />
+                              {availableStock} unid.
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="p-4">
                     {product.featured ? (
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Sí</span>

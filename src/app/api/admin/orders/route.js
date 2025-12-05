@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/admin-utils';
+import { sendOrderConfirmation, sendPaymentApproved } from '@/lib/email';
 
 // GET - Get all orders
 export async function GET() {
@@ -15,54 +16,6 @@ export async function GET() {
     }
 }
 
-// POST - Create new order
-export async function POST(request) {
-    try {
-        const body = await request.json();
-
-        // Handle discount code usage
-        if (body.discountCode) {
-            const discount = await prisma.discountCode.findUnique({
-                where: { code: body.discountCode }
-            });
-
-            if (discount) {
-                await prisma.discountCode.update({
-                    where: { id: discount.id },
-                    data: { usedCount: { increment: 1 } }
-                });
-            }
-        }
-
-        const newOrder = await prisma.order.create({
-            data: {
-                customerName: body.customer.name,
-                customerEmail: body.customer.email || null,
-                customerAddress: body.customer.address,
-                customerCity: body.customer.city,
-                items: body.items,
-                total: body.total,
-                paymentMethod: body.paymentMethod || 'card',
-                paymentDetails: body.paymentDetails || null,
-                status: body.status || (body.paymentMethod === 'transfer' ? 'Pendiente' : 'Procesando'),
-                userId: body.userId || null,
-                discountCode: body.discountCode || null
-            }
-        });
-
-        // Log activity
-        await logActivity('order_created', `Nueva orden de ${newOrder.customerName}`, {
-            orderId: newOrder.id,
-            total: newOrder.total,
-            discountCode: body.discountCode
-        });
-
-        return NextResponse.json(newOrder, { status: 201 });
-    } catch (error) {
-        console.error('Error creating order:', error);
-        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
-    }
-}
 
 // PATCH - Update order status
 export async function PATCH(request) {
@@ -89,6 +42,57 @@ export async function PATCH(request) {
             oldStatus,
             newStatus: body.status
         });
+
+        // Send payment approved email if status changed to 'Pagado'
+        if (body.status === 'Pagado' && oldStatus !== 'Pagado' && updatedOrder.customerEmail) {
+            try {
+                await sendPaymentApproved({
+                    ...updatedOrder,
+                    items: updatedOrder.items,
+                    customerName: updatedOrder.customerName,
+                    customerEmail: updatedOrder.customerEmail,
+                    shippingMethod: updatedOrder.shippingMethod,
+                    shippingCost: updatedOrder.shippingCost,
+                    mercadopagoPaymentId: updatedOrder.mercadopagoPaymentId
+                });
+            } catch (emailError) {
+                console.error('Error sending payment approved email:', emailError);
+            }
+        }
+
+        // Decrement stock if admin manually marks as paid
+        if (body.status === 'Pagado' && oldStatus !== 'Pagado') {
+            try {
+                const orderItems = updatedOrder.items;
+
+                if (orderItems && orderItems.length > 0) {
+                    console.log('Admin marked as paid, decrementing stock for items:', orderItems);
+
+                    const decrementResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/stock/decrement`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            items: orderItems.map(item => ({
+                                id: item.id,
+                                quantity: item.quantity
+                            }))
+                        })
+                    });
+
+                    if (!decrementResponse.ok) {
+                        const errorText = await decrementResponse.text();
+                        console.error('Failed to decrement stock:', errorText);
+                    } else {
+                        const result = await decrementResponse.json();
+                        console.log('Stock decremented successfully by admin action:', result);
+                    }
+                } else {
+                    console.warn('No items found in order, cannot decrement stock');
+                }
+            } catch (stockError) {
+                console.error('Error decrementing stock on admin update:', stockError);
+            }
+        }
 
         return NextResponse.json(updatedOrder);
     } catch (error) {

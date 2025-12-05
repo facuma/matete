@@ -6,20 +6,35 @@ import Button from '@/components/ui/Button';
 
 const statusColors = {
     'Procesando': 'bg-amber-100 text-amber-800',
+    'Pendiente': 'bg-gray-100 text-gray-800',
+    'Pagado': 'bg-green-100 text-green-800',
     'Enviado': 'bg-blue-100 text-blue-800',
-    'Completado': 'bg-green-100 text-green-800',
-    'Cancelado': 'bg-red-100 text-red-800',
-    'Pendiente': 'bg-gray-100 text-gray-800'
+    'Completado': 'bg-emerald-100 text-emerald-800',
+    'Cancelado': 'bg-red-100 text-red-800'
 };
 
-export default function OrderDetailsModal({ isOpen, onClose, order, onStatusChange }) {
+export default function OrderDetailsModal({ isOpen, onClose, order, onStatusChange, onCancelOrder }) {
     const [newStatus, setNewStatus] = useState(order?.status || 'Procesando');
+    const [canceling, setCanceling] = useState(false);
 
     if (!isOpen || !order) return null;
 
     const handleStatusUpdate = () => {
         if (newStatus !== order.status) {
             onStatusChange(order.id, newStatus);
+        }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!confirm('¿Estás seguro de cancelar esta orden? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        setCanceling(true);
+        try {
+            await onCancelOrder(order.id);
+        } finally {
+            setCanceling(false);
         }
     };
 
@@ -149,6 +164,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order, onStatusChan
                             >
                                 <option value="Pendiente">Pendiente</option>
                                 <option value="Procesando">Procesando</option>
+                                <option value="Pagado">Pagado</option>
                                 <option value="Enviado">Enviado</option>
                                 <option value="Completado">Completado</option>
                                 <option value="Cancelado">Cancelado</option>
@@ -161,10 +177,22 @@ export default function OrderDetailsModal({ isOpen, onClose, order, onStatusChan
                                 Actualizar
                             </Button>
                         </div>
-                        <div className="mt-2">
+                        <div className="mt-2 flex items-center justify-between">
                             <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}>
                                 Estado Actual: {order.status}
                             </span>
+
+                            {/* Cancel Order Button */}
+                            {order.status !== 'Cancelado' && (
+                                <Button
+                                    onClick={handleCancelOrder}
+                                    disabled={canceling}
+                                    variant="secondary"
+                                    className="bg-red-500 hover:bg-red-600 text-white text-sm"
+                                >
+                                    {canceling ? 'Cancelando...' : 'Cancelar Orden'}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

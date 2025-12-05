@@ -8,6 +8,7 @@ const statusColors = {
   Completado: 'bg-green-100 text-green-800',
   Enviado: 'bg-blue-100 text-blue-800',
   Procesando: 'bg-amber-100 text-amber-800',
+  Pagado: 'bg-emerald-100 text-emerald-800',
   Cancelado: 'bg-red-100 text-red-800',
   Pendiente: 'bg-gray-100 text-gray-800'
 };
@@ -80,6 +81,30 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleCancelOrder = async (orderId) => {
+    try {
+      const res = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`Orden cancelada exitosamente. Stock restaurado: ${data.stockRestored ? 'Sí' : 'No'}`);
+        await fetchOrders();
+        setIsDetailsOpen(false);
+        setSelectedOrder(null);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error canceling order:', error);
+      alert('Error al cancelar la orden');
+    }
+  };
+
   const openDetailsModal = (order) => {
     setSelectedOrder(order);
     setIsDetailsOpen(true);
@@ -121,6 +146,7 @@ export default function AdminOrdersPage() {
             <option value="Todos">Todos los estados</option>
             <option value="Pendiente">Pendiente</option>
             <option value="Procesando">Procesando</option>
+            <option value="Pagado">Pagado</option>
             <option value="Enviado">Enviado</option>
             <option value="Completado">Completado</option>
             <option value="Cancelado">Cancelado</option>
@@ -187,6 +213,7 @@ export default function AdminOrdersPage() {
         }}
         order={selectedOrder}
         onStatusChange={handleStatusChange}
+        onCancelOrder={handleCancelOrder}
       />
     </div>
   );

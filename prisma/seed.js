@@ -94,6 +94,41 @@ async function main() {
     });
     console.log('✅ Admin user created (admin@matete.com / Admin123!)');
 
+    // Seed Shipping Options
+    console.log('🚚 Seeding shipping options...');
+    const shippingOptions = [
+        {
+            name: 'Retiro en Local',
+            description: 'Retirá tu pedido en nuestro local en Resistencia, Chaco',
+            price: 0,
+            deliveryDays: '1-2 días hábiles'
+        },
+        {
+            name: 'Envío Standard',
+            description: 'Envío a todo el país vía Correo Argentino',
+            price: 1500,
+            deliveryDays: '3-5 días hábiles'
+        },
+        {
+            name: 'Envío Express',
+            description: 'Envío rápido a principales ciudades',
+            price: 3000,
+            deliveryDays: '1-2 días hábiles'
+        }
+    ];
+
+    for (const option of shippingOptions) {
+        await prisma.shippingOption.upsert({
+            where: { id: shippingOptions.indexOf(option) + 1 },
+            update: {},
+            create: {
+                id: shippingOptions.indexOf(option) + 1,
+                ...option
+            }
+        });
+    }
+    console.log(`✅ Seeded ${shippingOptions.length} shipping options`);
+
     console.log('🎉 Database seed completed successfully!');
 }
 

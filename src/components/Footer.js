@@ -22,23 +22,30 @@ export default function Footer() {
                     <h4 className="text-white font-bold mb-4">Links Rápidos</h4>
                     <ul className="space-y-2 text-sm">
                         <li><Link href="/shop" className="cursor-pointer hover:text-white">Ver Tienda</Link></li>
-                        <li className="cursor-pointer hover:text-white"><Link href="/blog/como-curar-mate-calabaza-madera-guia-paso-a-paso">Cómo curar el mate</Link></li>
-                        <li className="cursor-pointer hover:text-white">Envíos y Devoluciones</li>
+                        <li><Link href="/blog/como-curar-mate-calabaza-madera-guia-paso-a-paso" className="cursor-pointer hover:text-white">Cómo curar el mate</Link></li>
+                        <li><Link href="/cambios-devoluciones" className="cursor-pointer hover:text-white">Envíos y Devoluciones</Link></li>
+                        <li><Link href="/my-orders" className="cursor-pointer hover:text-white">Mis Pedidos</Link></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="text-white font-bold mb-4">Legal</h4>
+                    <ul className="space-y-2 text-sm">
+                        <li><Link href="/terminos" className="cursor-pointer hover:text-white">Términos y Condiciones</Link></li>
+                        <li><Link href="/privacidad" className="cursor-pointer hover:text-white">Política de Privacidad</Link></li>
+                        <li><Link href="/cambios-devoluciones" className="cursor-pointer hover:text-white">Cambios y Devoluciones</Link></li>
                     </ul>
                 </div>
                 <div>
                     <h4 className="text-white font-bold mb-4">Contacto</h4>
                     <ul className="space-y-2 text-sm">
                         <li className="flex gap-2"><MapPin size={16} /> Resistencia, Chaco, Arg.</li>
-                        <li className="flex gap-2"><Mail size={16} /> hola@matete.com.ar</li>
+                        <li className="flex gap-2"><Mail size={16} /> matete@clickarg.com</li>
                     </ul>
-                </div>
-                <div>
-                    <h4 className="text-white font-bold mb-4">Medios de Pago</h4>
-                    <div className="flex gap-3 items-center">
-                        <img src="/svg/visa.svg" alt="Visa" className="h-8 w-auto bg-white rounded px-1" />
-                        <img src="/svg/mastercard.svg" alt="Mastercard" className="h-8 w-auto bg-white rounded px-1" />
-                        <img src="/svg/mercadopago.svg" alt="Mercado Pago" className="h-8 w-auto bg-white rounded px-1" />
+                    <h4 className="text-white font-bold mb-2 mt-4">Medios de Pago</h4>
+                    <div className="flex gap-2 items-center">
+                        <img src="/svg/visa.svg" alt="Visa" className="h-6 w-auto bg-white rounded px-1" />
+                        <img src="/svg/mastercard.svg" alt="Mastercard" className="h-6 w-auto bg-white rounded px-1" />
+                        <img src="/svg/mercadopago.svg" alt="Mercado Pago" className="h-6 w-auto bg-white rounded px-1" />
                     </div>
                 </div>
             </div>

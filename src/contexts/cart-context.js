@@ -28,7 +28,34 @@ export const CartProvider = ({ children }) => {
         localStorage.setItem('matete_cart', JSON.stringify(cart));
     }, [cart]);
 
-    const addToCart = (product, qty = 1, options = {}) => {
+    const addToCart = async (product, qty = 1, options = {}) => {
+        // Validate stock availability before adding (silently - UI will show disabled state)
+        try {
+            const response = await fetch('/api/products');
+            const products = await response.json();
+            const currentProduct = products.find(p => p.id === product.id);
+
+            if (!currentProduct) return false;
+
+            const availableStock = (currentProduct.stock || 0) - (currentProduct.reservedStock || 0);
+
+            const optionsString = JSON.stringify(Object.keys(options).sort().reduce((obj, key) => {
+                obj[key] = options[key];
+                return obj;
+            }, {}));
+            const cartId = `${product.id}-${optionsString}`;
+            const existingItem = cart.find(item => item.cartId === cartId);
+            const currentCartQuantity = existingItem ? existingItem.quantity : 0;
+            const totalQuantity = currentCartQuantity + qty;
+
+            // Silently prevent if exceeds stock
+            if (totalQuantity > availableStock) {
+                return false;
+            }
+        } catch (error) {
+            console.error('Error validating stock:', error);
+        }
+
         // Facebook Pixel Event: AddToCart
         event('AddToCart', {
             content_name: product.name,
@@ -39,7 +66,6 @@ export const CartProvider = ({ children }) => {
         });
 
         setCart(prev => {
-            // Create a unique ID for the cart item based on product ID and sorted options
             const optionsString = JSON.stringify(Object.keys(options).sort().reduce((obj, key) => {
                 obj[key] = options[key];
                 return obj;
@@ -55,6 +81,7 @@ export const CartProvider = ({ children }) => {
             return [...prev, { ...product, quantity: qty, selectedOptions: options, cartId }];
         });
         setIsCartOpen(true);
+        return true;
     };
 
     const removeFromCart = (cartId) => {
@@ -63,7 +90,7 @@ export const CartProvider = ({ children }) => {
 
     const clearCart = () => {
         setCart([]);
-    }
+    };
 
     const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const cartSavings = cart.reduce((acc, item) => {
