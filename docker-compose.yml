@@ -1,41 +1,51 @@
 version: '3.8'
 
 services:
-  # Base de datos PostgreSQL
+  # ========================================
+  # PostgreSQL Database
+  # ========================================
   postgres:
     image: postgres:15-alpine
     container_name: matete_postgres
     restart: unless-stopped
+    
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-matete}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-matete123}
       POSTGRES_DB: ${POSTGRES_DB:-matete_db}
+    
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
+    
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-matete}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    
     networks:
       - matete_network
 
-  # Frontend Next.js
+  # ========================================
+  # Next.js Frontend
+  # ========================================
   frontend:
-    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - NODE_ENV=production
+    
     container_name: matete_frontend
     restart: unless-stopped
+    
     ports:
       - "${APP_PORT:-3000}:3000"
+    
     environment:
-      # Database
+      # Database (usa nombre de servicio 'postgres' como host)
       DATABASE_URL: "postgresql://${POSTGRES_USER:-matete}:${POSTGRES_PASSWORD:-matete123}@postgres:5432/${POSTGRES_DB:-matete_db}"
       
       # Next.js
@@ -43,33 +53,46 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       
-      # MercadoPago (si aplica)
+      # MercadoPago
       NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
       
-      # Production mode
+      # Production settings
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
       PORT: 3000
       HOSTNAME: "0.0.0.0"
-      
+    
     depends_on:
       postgres:
         condition: service_healthy
+    
     networks:
       - matete_network
-    # Ejecutar migraciones antes de iniciar el servidor
+    
+    # Ejecutar migraciones y seed antes de iniciar el servidor
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        npx prisma migrate deploy --schema=/app/prisma/schema.prisma
-        npx prisma db seed
+        echo "🔄 Esperando a que PostgreSQL esté listo..."
+        sleep 2
+        echo "📦 Aplicando migraciones de Prisma..."
+        npx prisma migrate deploy --schema=./prisma/schema.prisma
+        echo "🌱 Ejecutando seed de base de datos..."
+        npx prisma db seed || echo "⚠️  Seed falló o ya ejecutado"
+        echo "🚀 Iniciando servidor Next.js..."
         node server.js
 
+# ========================================
+# Volumes
+# ========================================
 volumes:
   postgres_data:
     driver: local
 
+# ========================================
+# Networks
+# ========================================
 networks:
   matete_network:
     driver: bridge
