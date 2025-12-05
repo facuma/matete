@@ -40,7 +40,7 @@ WORKDIR /app
 
 # Instalar OpenSSL completo para Prisma
 RUN apt-get update && \
-    apt-get install -y openssl libssl3 libssl-dev ca-certificates && \
+    apt-get install -y openssl libssl1.1 libssl-dev ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Copiar node_modules del stage anterior
