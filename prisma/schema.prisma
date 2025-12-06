@@ -114,6 +114,7 @@ model User {
   sessions      Session[]
   orders        Order[]   @relation("UserOrders")
   posts         Post[]
+  deviceTokens  DeviceToken[]
   
   emailVerified DateTime?
   verificationCode String?
@@ -130,6 +131,18 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("device_tokens")
 }
 
 model HomePageContent {

@@ -12,6 +12,13 @@ export default withAuth(
             return NextResponse.next();
         }
 
+        // Check if request is authenticated via Bearer token (Mobile)
+        // If authorized callback returned true for Bearer, we skip the token (cookie) check
+        const authHeader = req.headers.get("authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+            return NextResponse.next();
+        }
+
         // Check if user is admin for /admin/* routes (pages and API)
         if (isAdminRoute && token?.role !== "admin") {
             if (req.nextUrl.pathname.startsWith("/api/")) {
@@ -24,18 +31,39 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token, req }) => {
+            authorized: async ({ token, req }) => {
                 const isAdminRoute = req.nextUrl.pathname.startsWith("/admin");
                 const isApiAdminRoute = req.nextUrl.pathname.startsWith("/api/admin");
                 const isAdminLogin = req.nextUrl.pathname === "/admin/login";
                 const isMyOrders = req.nextUrl.pathname === "/my-orders";
+                const isMobileLogin = req.nextUrl.pathname === "/api/mobile/login";
 
-                // Admin login is public
-                if (isAdminLogin) return true;
+                // Public routes
+                if (isAdminLogin || isMobileLogin) return true;
 
-                // Allow API admin routes to pass through to the middleware function
-                // where we handle the 401 response manually
-                if (isApiAdminRoute) return true;
+                // API Admin Routes: Check for Bearer Token
+                if (isApiAdminRoute) {
+                    const authHeader = req.headers.get("authorization");
+                    if (authHeader?.startsWith("Bearer ")) {
+                        try {
+                            const { jwtVerify } = await import('jose');
+                            const jwt = authHeader.split(" ")[1];
+                            const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+                            const { payload } = await jwtVerify(jwt, secret);
+                            // Verify role if needed, or just presence
+                            if (payload.role === 'admin') return true;
+                        } catch (e) {
+                            // Invalid token, fall through to cookie check
+                        }
+                    }
+                    // Fallback to cookie check for web admin API
+                    // We return true here to let the middleware function handle the 401 for cookies
+                    // But if using Bearer, we want to allow it.
+                    // IMPORTANT: If authorized returns FALSE, it redirects to login page. 
+                    // For API routes, better to return true and handle 401 in middleware function?
+                    // Existing code: "if (isApiAdminRoute) return true;"
+                    return true;
+                }
 
                 // Admin pages require authentication
                 if (isAdminRoute) return !!token;

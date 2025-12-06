@@ -140,6 +140,18 @@ export async function POST(request) {
             }
         }
 
+        // Send Push Notification to Admins
+        try {
+            const { sendPushNotification } = await import('@/lib/notification-service');
+            await sendPushNotification(
+                '¡Nueva Orden Recibida! 🧉',
+                `Pedido #${newOrder.id.slice(0, 8)} por $${newOrder.total} de ${newOrder.customerName}`,
+                { orderId: newOrder.id }
+            );
+        } catch (pushError) {
+            console.error('Error sending push notification:', pushError);
+        }
+
         return NextResponse.json(newOrder, { status: 201 });
     } catch (error) {
         console.error('Error creating order:', error);
