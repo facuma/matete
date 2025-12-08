@@ -34,12 +34,15 @@ export async function POST(request) {
                 imageUrl: body.imageUrl,
                 description: body.description || '',
                 featured: body.featured || false,
-                featured: body.featured || false,
                 rating: body.rating || 5,
                 slug: body.slug || body.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
                 metaTitle: body.metaTitle,
                 metaDescription: body.metaDescription,
                 stock: parseInt(body.stock) || 0,
+                lowStockThreshold: parseInt(body.lowStockThreshold) || 5,
+                material: body.material,
+                brand: body.brand,
+                manufacturer: body.manufacturer,
                 options: {
                     create: body.options?.map(opt => ({
                         name: opt.name,
@@ -66,6 +69,14 @@ export async function POST(request) {
         return NextResponse.json(newProduct, { status: 201 });
     } catch (error) {
         console.error('Error creating product:', error);
+
+        if (error.code === 'P2002') {
+            return NextResponse.json(
+                { error: 'A product with this slug already exists' },
+                { status: 409 }
+            );
+        }
+
         return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
     }
 }
