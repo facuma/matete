@@ -65,7 +65,7 @@ export default function AdminContentPage() {
 
             if (res.ok) {
                 const data = await res.json();
-                setFormData(prev => ({ ...prev, [fieldName]: data.url }));
+                setFormData(prev => ({ ...prev, [fieldName]: data.imageUrl }));
             } else {
                 alert('Error al subir imagen');
             }
