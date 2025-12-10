@@ -123,7 +123,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-stone-800 mb-8">Órdenes de Clientes</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-stone-800 mb-8">Órdenes de Clientes</h1>
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
@@ -154,8 +154,8 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Desktop Orders Table */}
+      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-stone-50 border-b border-stone-200">
             <tr>
@@ -202,6 +202,46 @@ export default function AdminOrdersPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Orders List (Card View) */}
+      <div className="md:hidden flex flex-col gap-4">
+        {filteredOrders.length === 0 ? (
+          <div className="p-8 text-center text-stone-400 bg-white rounded-lg shadow-sm">
+            {orders.length === 0 ? 'No hay órdenes registradas' : 'No se encontraron órdenes'}
+          </div>
+        ) : (
+          filteredOrders.map(order => (
+            <div key={order.id} className="bg-white p-4 rounded-lg shadow-sm border border-stone-100 flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs text-stone-500">#{order.id}</span>
+                    <span className="text-xs text-stone-400">•</span>
+                    <span className="text-xs text-stone-500">{new Date(order.createdAt).toLocaleDateString('es-AR')}</span>
+                  </div>
+                  <h3 className="font-medium text-stone-800">{order.customerName}</h3>
+                </div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}>
+                  {order.status}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center border-t border-stone-50 pt-3 mt-1">
+                <div className="flex flex-col">
+                  <span className="text-xs text-stone-400">Total</span>
+                  <span className="font-bold text-stone-800">${order.total.toLocaleString('es-AR')}</span>
+                </div>
+                <button
+                  onClick={() => openDetailsModal(order)}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  Ver Detalles
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Order Details Modal */}

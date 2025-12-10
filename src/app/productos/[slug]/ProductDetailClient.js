@@ -69,7 +69,7 @@ export default function ProductDetailClient({ product, transferDiscount = 0 }) {
 
     return (
         <div className="min-h-screen bg-[#F9F7F2] text-[#1a1a1a] animate-[fadeIn_0.5s_ease-in-out]">
-            <div className="pt-28 pb-20 px-4 md:px-8 max-w-[1400px] mx-auto">
+            <div className="pt-28 pb-32 md:pb-20 px-4 md:px-8 max-w-[1400px] mx-auto">
                 <Breadcrumbs items={breadcrumbItems} className="mb-6 opacity-60 text-sm" />
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
@@ -245,6 +245,26 @@ export default function ProductDetailClient({ product, transferDiscount = 0 }) {
                 <div className="mt-24 border-t border-stone-200 pt-16">
                     <h2 className="text-3xl font-serif text-center mb-12">También te podría gustar</h2>
                     <RelatedProducts currentProductId={product.id} currentCategory={product.category} />
+                </div>
+            </div>
+
+            {/* Mobile Sticky Add to Cart Bar */}
+            <div className="fixed bottom-0 left-0 z-40 w-full bg-white border-t border-stone-200 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Total</span>
+                        <span className="text-xl font-bold text-[#1a1a1a] leading-none">${currentPrice.toLocaleString('es-AR')}</span>
+                    </div>
+                    <Button
+                        onClick={() => {
+                            const regularPrice = product.price + extrasPrice;
+                            addToCart({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
+                        }}
+                        className="flex-1 py-3.5 text-sm font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full flex items-center justify-center gap-2 uppercase shadow-lg active:scale-95 transition-all"
+                    >
+                        <ShoppingCart size={18} />
+                        Agregar
+                    </Button>
                 </div>
             </div>
         </div>

@@ -163,24 +163,26 @@ export default function AdminProductsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-stone-800">Gestión de Productos</h1>
-        <div className="flex gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-stone-800">Gestión de Productos</h1>
+        <div className="flex gap-3 w-full md:w-auto">
           <Button
             variant="outline"
-            className="flex items-center gap-2 bg-white border-stone-300 text-stone-700 hover:bg-stone-50"
+            className="flex-1 md:flex-none justify-center items-center gap-2 bg-white border-stone-300 text-stone-700 hover:bg-stone-50"
             onClick={() => setIsUploadOpen(true)}
           >
             <Upload size={20} />
-            Carga Masiva
+            <span className="hidden sm:inline">Carga Masiva</span>
+            <span className="sm:hidden">Importar</span>
           </Button>
           <Button
             variant="primary"
-            className="flex items-center gap-2"
+            className="flex-1 md:flex-none justify-center items-center gap-2"
             onClick={openCreateModal}
           >
             <PlusCircle size={20} />
-            Agregar Producto
+            <span className="hidden sm:inline">Agregar Producto</span>
+            <span className="sm:hidden">Nuevo</span>
           </Button>
         </div>
       </div>
@@ -215,8 +217,8 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Desktop Products Table */}
+      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-stone-50 border-b border-stone-200">
             <tr>
@@ -311,6 +313,75 @@ export default function AdminProductsPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Products List (Card View) */}
+      <div className="md:hidden flex flex-col gap-4">
+        {filteredProducts.length === 0 ? (
+          <div className="p-8 text-center text-stone-400 bg-white rounded-lg shadow-sm">
+            No se encontraron productos
+          </div>
+        ) : (
+          filteredProducts.map(product => {
+            const availableStock = product.stock - (product.reservedStock || 0);
+            const isLowStock = availableStock <= product.lowStockThreshold;
+            const isOutOfStock = availableStock <= 0;
+
+            return (
+              <div key={product.id} className="bg-white p-4 rounded-lg shadow-sm border border-stone-100 flex gap-4">
+                <div className="w-20 h-20 rounded-md overflow-hidden bg-stone-100 flex-shrink-0">
+                  <img
+                    src={getProductImage(product)}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-medium text-stone-800 truncate pr-2">{product.name}</h3>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openEditModal(product)}
+                          className="p-1.5 text-blue-600 bg-blue-50 rounded-md"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(product)}
+                          className="p-1.5 text-red-600 bg-red-50 rounded-md"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-stone-500">{product.category}</p>
+                  </div>
+
+                  <div className="flex justify-between items-end mt-2">
+                    <span className="font-semibold text-stone-800">${product.price.toLocaleString('es-AR')}</span>
+
+                    <div className="flex items-center">
+                      {isOutOfStock ? (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
+                          <AlertTriangle size={10} /> Sin Stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 flex items-center gap-1">
+                          <AlertTriangle size={10} /> {availableStock}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1">
+                          <Package size={10} /> {availableStock}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Modals */}

@@ -18,23 +18,27 @@ const navLinks = [
   { href: '/admin/images', label: 'Imágenes', icon: Image },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ onNavigate }) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-stone-900 text-white flex flex-col">
+    <aside className="w-64 bg-stone-900 text-white flex flex-col h-full">
       <div className="p-6 text-center border-b border-stone-800">
         <h2 className="text-2xl font-serif font-bold">MATETÉ</h2>
         <span className="text-sm text-stone-400">Admin Panel</span>
       </div>
-      <nav className="flex-grow p-4">
+      <nav className="flex-grow p-4 overflow-y-auto">
         <ul>
           {navLinks.map(link => (
             <li key={link.href}>
-              <Link href={link.href} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === link.href
-                ? 'bg-stone-700 text-white'
-                : 'text-stone-300 hover:bg-stone-800 hover:text-white'
-                }`}>
+              <Link
+                href={link.href}
+                onClick={onNavigate}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${pathname === link.href
+                  ? 'bg-stone-700 text-white'
+                  : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                  }`}
+              >
                 <link.icon size={20} />
                 <span>{link.label}</span>
               </Link>

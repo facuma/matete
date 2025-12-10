@@ -121,8 +121,8 @@ export default function CustomersPage() {
                 </div>
             </div>
 
-            {/* Customers Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+            {/* Desktop Customers Table */}
+            <div className="hidden md:block bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-stone-50 border-b border-stone-200">
@@ -176,6 +176,53 @@ export default function CustomersPage() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Mobile Customers List (Card View) */}
+            <div className="md:hidden flex flex-col gap-4">
+                {filteredCustomers.length === 0 ? (
+                    <div className="p-8 text-center text-stone-400 bg-white rounded-lg shadow-sm">
+                        No se encontraron clientes
+                    </div>
+                ) : (
+                    filteredCustomers.map(customer => (
+                        <div key={customer.id} className="bg-white p-4 rounded-lg shadow-sm border border-stone-200 flex flex-col gap-3">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="font-medium text-stone-800">{customer.name}</h3>
+                                    <p className="text-sm text-stone-500">{customer.email}</p>
+                                </div>
+                                <span className="flex items-center gap-1 text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full">
+                                    <Calendar size={12} />
+                                    {new Date(customer.createdAt).toLocaleDateString('es-AR')}
+                                </span>
+                            </div>
+
+                            <div className="flex gap-4 border-t border-stone-100 pt-3 mt-1">
+                                <div className="flex-1">
+                                    <p className="text-xs text-stone-500">Pedidos</p>
+                                    <p className="font-semibold text-stone-800 flex items-center gap-1">
+                                        <Package size={14} />
+                                        {customer.orderCount}
+                                    </p>
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs text-stone-500">Total Gastado</p>
+                                    <p className="font-semibold text-green-600">
+                                        ${customer.totalBilling.toLocaleString('es-AR')}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => handleViewDetails(customer.id)}
+                                className="w-full mt-2 py-2 bg-stone-50 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-100 transition-colors"
+                            >
+                                Ver Detalles
+                            </button>
+                        </div>
+                    ))
+                )}
             </div>
 
             {/* Customer Details Modal */}

@@ -3,9 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 
+import { usePathname } from 'next/navigation';
+
 export default function WhatsAppButton({ productName = null, productUrl = null }) {
+    const pathname = usePathname();
     const [isVisible, setIsVisible] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Check if we are on a product detail page
+    const isProductPage = pathname?.startsWith('/productos/');
 
     // Get WhatsApp number from environment variable
     // Default to a placeholder that user needs to replace
@@ -33,7 +39,7 @@ export default function WhatsAppButton({ productName = null, productUrl = null }
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className={`fixed bottom-6 right-6 z-50 ${isProductPage ? 'hidden md:block' : ''}`}>
             {/* Tooltip/Message bubble */}
             {isExpanded && (
                 <div className="absolute bottom-20 right-0 bg-white rounded-lg shadow-xl border border-stone-200 p-4 w-64 animate-fade-in">
