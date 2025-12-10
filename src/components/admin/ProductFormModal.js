@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
 import ImagePicker from '@/components/admin/ImagePicker';
@@ -28,6 +28,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
     const [showProductSelector, setShowProductSelector] = useState(false);
     const [currentOptionIndex, setCurrentOptionIndex] = useState(null);
     const [productSearch, setProductSearch] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (product) {
@@ -99,9 +100,16 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
 
     // ... (rest of handlers like handleSubmit, handleProductSelect)
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave(formData);
+        setIsSaving(true);
+        try {
+            await onSave(formData);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleProductSelect = (selectedProduct) => {
@@ -534,8 +542,15 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                        <Button type="submit" variant="primary" className="flex-1">
-                            {product ? 'Guardar Cambios' : 'Crear Producto'}
+                        <Button type="submit" variant="primary" className="flex-1 flex items-center justify-center gap-2" disabled={isSaving}>
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} />
+                                    Guardando...
+                                </>
+                            ) : (
+                                product ? 'Guardar Cambios' : 'Crear Producto'
+                            )}
                         </Button>
                         <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
                             Cancelar

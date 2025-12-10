@@ -15,69 +15,52 @@ export async function POST(request) {
         // Validate server configuration
         if (!supabaseAdmin) {
             console.error("Missing SUPABASE_SERVICE_ROLE_KEY");
-            return NextResponse.json({ error: "Server configuration error: Missing Service Role Key" }, { status: 500 });
+            return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
         // Convert file to buffer
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Create unique filename
-        const timestamp = Date.now();
-        const originalName = file.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
-        const filename = `${timestamp}-${originalName}`;
-        const resizedFilename = getResizedFilename(filename);
-
-        // Upload Original to Supabase (using Admin client to bypass RLS)
-        const { data: originalData, error: originalError } = await supabaseAdmin.storage
-            .from('products')
-            .upload(`uploads/${filename}`, buffer, {
-                contentType: file.type,
-                upsert: false
-            });
-
-        if (originalError) {
-            console.error("Supabase upload error:", originalError);
-            return NextResponse.json({ error: "Failed to upload to storage" }, { status: 500 });
-        }
-
-        // Resize image (memory buffer)
-        let resizedBuffer;
+        // OPTIMIZATION: Resize & Compress BEFORE Upload
+        let optimizedBuffer;
         try {
-            resizedBuffer = await sharp(buffer)
-                .resize({ width: 800, withoutEnlargement: true })
+            optimizedBuffer = await sharp(buffer)
+                .rotate() // Respect EXIF orientation
+                .resize({ width: 1200, withoutEnlargement: true }) // Max width 1200px
+                .webp({ quality: 80 }) // Convert to WebP, 80% quality
                 .toBuffer();
         } catch (resizeError) {
-            console.error("Error resizing image:", resizeError);
-            resizedBuffer = buffer;
+            console.error("Optimization failed, falling back to original:", resizeError);
+            optimizedBuffer = buffer;
         }
 
-        // Upload Resized to Supabase (using Admin client)
-        const { data: resizedData, error: resizedError } = await supabaseAdmin.storage
+        // Create unique filename (ensure .webp extension if optimized)
+        const timestamp = Date.now();
+        const originalName = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
+        const filename = `${timestamp}-${originalName}.webp`;
+
+        // Upload One Optimized File
+        const { data, error } = await supabaseAdmin.storage
             .from('products')
-            .upload(`uploads/${resizedFilename}`, resizedBuffer, {
-                contentType: file.type,
+            .upload(`uploads/${filename}`, optimizedBuffer, {
+                contentType: 'image/webp',
                 upsert: false
             });
 
-
-        if (resizedError) {
-            console.error("Supabase resized upload error:", resizedError);
-            // Proceed with original if resized fails, or fail? Let's verify original URL exists.
+        if (error) {
+            console.error("Supabase upload error:", error);
+            return NextResponse.json({ error: "Failed to upload" }, { status: 500 });
         }
 
-        // Get Public URLs
+        // Get Public URL
         const { data: { publicUrl: imageUrl } } = supabase.storage
             .from('products')
             .getPublicUrl(`uploads/${filename}`);
 
-        const { data: { publicUrl: resizedUrl } } = supabase.storage
-            .from('products')
-            .getPublicUrl(`uploads/${resizedFilename}`);
-
         return NextResponse.json({
             imageUrl,
-            resizedUrl: resizedError ? imageUrl : resizedUrl // Fallback to original if resize upload failed
+            resizedUrl: imageUrl // Backwards compatibility
         }, { status: 200 });
 
     } catch (error) {
@@ -114,7 +97,8 @@ export async function GET() {
                 return {
                     name: file.name,
                     url: publicUrl,
-                    created_at: file.created_at
+                    created_at: file.created_at,
+                    size: file.metadata?.size || 0 // Add size
                 };
             });
 

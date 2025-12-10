@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
-import { Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, Image as ImageIcon, Loader2 } from 'lucide-react';
 
 import dynamic from 'next/dynamic';
 import 'react-quill-new/dist/quill.snow.css';
@@ -129,7 +129,7 @@ export default function BlogEditor({ post = null }) {
                         className="flex items-center gap-2"
                         disabled={loading}
                     >
-                        <Save size={20} />
+                        {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                         {loading ? 'Guardando...' : 'Guardar'}
                     </Button>
                 </div>

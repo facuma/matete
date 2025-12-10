@@ -234,9 +234,14 @@ export default function ImagePicker({ onSelect, currentImage, trigger }) {
                                     Tu Librería
                                 </h4>
                                 <div className="h-px bg-stone-200 flex-1"></div>
-                                <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-full">
-                                    {images.length} imágenes
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-stone-500 bg-stone-100 px-3 py-1 rounded-full">
+                                        {(images.reduce((acc, img) => acc + (img.size || 0), 0) / (1024 * 1024)).toFixed(2)} MB usados
+                                    </span>
+                                    <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-full">
+                                        {images.length} imágenes
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Gallery Grid */}
