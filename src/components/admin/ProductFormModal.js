@@ -11,7 +11,8 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         name: '',
         price: '',
         promotionalPrice: '',
-        category: 'Mates',
+        category: '', // Kept for legacy or visual
+        categoryId: '', // New field
         description: '',
         imageUrl: '',
         images: [],
@@ -24,11 +25,34 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         stock: 0,
         lowStockThreshold: 5
     });
+
+    const [categories, setCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+
     // Removed old upload/url states
     const [showProductSelector, setShowProductSelector] = useState(false);
     const [currentOptionIndex, setCurrentOptionIndex] = useState(null);
     const [productSearch, setProductSearch] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchCategories();
+        }
+    }, [isOpen]);
+
+    const fetchCategories = async () => {
+        try {
+            setLoadingCategories(true);
+            const res = await fetch('/api/admin/categories');
+            const data = await res.json();
+            setCategories(data);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        } finally {
+            setLoadingCategories(false);
+        }
+    };
 
     useEffect(() => {
         if (product) {
@@ -43,14 +67,17 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 metaTitle: product.metaTitle || '',
                 metaDescription: product.metaDescription || '',
                 stock: product.stock || 0,
-                lowStockThreshold: product.lowStockThreshold || 5
+                lowStockThreshold: product.lowStockThreshold || 5,
+                categoryId: product.categoryId || '',
+                category: product.category || '' // Fallback
             });
         } else {
             setFormData({
                 name: '',
                 price: '',
                 promotionalPrice: '',
-                category: 'Mates',
+                category: '',
+                categoryId: '',
                 description: '',
                 imageUrl: '',
                 images: [],
@@ -104,7 +131,28 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         e.preventDefault();
         setIsSaving(true);
         try {
-            await onSave(formData);
+            // Find category name to sync legacy field
+            let categoryName = formData.category;
+            if (formData.categoryId) {
+                // Flatten categories to find name
+                const findName = (id, cats) => {
+                    for (const cat of cats) {
+                        if (cat.id === parseInt(id)) return cat.name;
+                        if (cat.children) {
+                            const found = findName(id, cat.children);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const name = findName(formData.categoryId, categories);
+                if (name) categoryName = name;
+            }
+
+            await onSave({
+                ...formData,
+                category: categoryName
+            });
         } catch (error) {
             console.error(error);
         } finally {
@@ -195,14 +243,26 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                             </label>
                             <select
                                 required
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                value={formData.categoryId}
+                                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                                 className="w-full p-3 rounded-lg border border-stone-200 focus:border-stone-800 focus:ring-1 focus:ring-stone-800 outline-none"
                             >
-                                <option value="Mates">Mates</option>
-                                <option value="Bombillas">Bombillas</option>
-                                <option value="Yerbas">Yerbas</option>
-                                <option value="Accesorios">Accesorios</option>
+                                <option value="">Seleccionar Categoría</option>
+                                {categories.map(cat => (
+                                    <React.Fragment key={cat.id}>
+                                        <option value={cat.id} className="font-semibold">{cat.name}</option>
+                                        {cat.children && cat.children.map(sub => (
+                                            <option key={sub.id} value={sub.id}>
+                                                &nbsp;&nbsp;&nbsp;↳ {sub.name}
+                                            </option>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                                {/* If current category is not found in fetched categories (legacy), show it? 
+                                    Better to just force selection from new list or keep legacy 'category' field?
+                                    Actually, if no categoryId is selected, we might want to let them select legacy string?
+                                    No, let's enforce new system. 
+                                */}
                             </select>
                         </div>
 

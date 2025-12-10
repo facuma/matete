@@ -1,29 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Removed unused useState, useEffect
 import Link from 'next/link';
 import { useCart } from '@/contexts/cart-context';
+import { useProducts } from '@/contexts/product-context'; // Import unified store
 import { X, ShoppingBag, Trash2 } from 'lucide-react';
 import { getProductImage } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 
 export default function CartSidebar() {
     const { isCartOpen, setIsCartOpen, cart, cartCount, cartTotal, cartSubtotal, cartSavings, addToCart, removeFromCart } = useCart();
-    const [productsData, setProductsData] = useState([]);
+    const { products } = useProducts(); // Use cached products for stock check
 
-    // Fetch products data to get stock information
-    useEffect(() => {
-        if (isCartOpen && cart.length > 0) {
-            fetch('/api/products')
-                .then(res => res.json())
-                .then(data => setProductsData(data))
-                .catch(err => console.error('Error fetching products:', err));
-        }
-    }, [isCartOpen, cart.length]);
-
-    // Get available stock for a product
+    // Get available stock for a product from the unified store
     const getAvailableStock = (productId) => {
-        const product = productsData.find(p => p.id === productId);
+        const product = products.find(p => p.id === productId);
         if (!product) return 999; // Default high number if not found
         return (product.stock || 0) - (product.reservedStock || 0);
     };

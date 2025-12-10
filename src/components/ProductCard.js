@@ -64,7 +64,7 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                             "absolute top-3 right-3 bg-white/95 backdrop-blur-md rounded-full font-bold shadow-md border border-stone-100 text-stone-700",
                             isCompact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
                         )}>
-                            {product.category}
+                            {product.category?.parent?.name || product.category?.name || (typeof product.category === 'string' ? product.category : '')}
                         </div>
                     </Link>
                 )}

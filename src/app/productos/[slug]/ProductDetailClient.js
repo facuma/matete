@@ -2,15 +2,27 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/cart-context';
+import { useProducts } from '@/contexts/product-context';
 import Button from '@/components/ui/Button';
 import { ShieldCheck, Truck, RefreshCw, Star, ChevronLeft, ChevronRight, ShoppingCart, Landmark, Check } from 'lucide-react';
 import { event } from '@/components/FacebookPixel';
 import RelatedProducts from '@/components/RelatedProducts';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
+import ProductCard from '@/components/ProductCard';
 
-export default function ProductDetailClient({ product, transferDiscount = 0 }) {
+
+import ProductSkeleton from '@/components/ProductSkeleton'; // You might need a more specific skeleton
+
+export default function ProductDetailClient({ initialProduct, slug, transferDiscount = 0 }) {
     const { addToCart } = useCart();
+    const { products, loading } = useProducts();
     const [selectedOptions, setSelectedOptions] = useState({});
+
+    // 1. Try to find full product in global store (loaded separatey)
+    // 2. Fallback to initialProduct (metadata from server)
+    // 3. If neither, we are likely loading or 404
+    const fullProduct = products.find(p => p.slug === slug);
+    const product = fullProduct || initialProduct;
 
     const [activeImage, setActiveImage] = useState(null);
     const [images, setImages] = useState([]);
@@ -23,17 +35,42 @@ export default function ProductDetailClient({ product, transferDiscount = 0 }) {
                 : (product.imageUrl ? [product.imageUrl] : []);
 
             setImages(imgs);
-            setActiveImage(imgs[0] || null);
+            // Only reset active image if it wasn't set or if the product changed significantly
+            // But for progressive hydration (metadata -> full), the first image is usually the same.
+            // We can check if activeImage is already set to avoid flickering.
+            if (!activeImage && imgs.length > 0) setActiveImage(imgs[0]);
+            else if (imgs.length > 0 && !imgs.includes(activeImage)) setActiveImage(imgs[0]);
 
-            event('ViewContent', {
-                content_name: product.name,
-                content_ids: [product.id],
-                content_type: 'product',
-                value: product.promotionalPrice || product.price,
-                currency: 'ARS'
-            });
+            // Track only if full product loaded to avoid duplicate events or partial data tracking?
+            // Metadata usually has price/name, so it's fine.
+            if (fullProduct) {
+                event('ViewContent', {
+                    content_name: product.name,
+                    content_ids: [product.id],
+                    content_type: 'product',
+                    value: product.promotionalPrice || product.price,
+                    currency: 'ARS'
+                });
+            }
         }
-    }, [product]);
+    }, [product, fullProduct]); // Re-run when full product arrives
+
+    if (!product && loading) {
+        // Full Page Skeleton
+        return (
+            <div className="pt-28 pb-20 px-4 max-w-[1400px] mx-auto min-h-screen">
+                <div className="animate-pulse flex flex-col lg:flex-row gap-10">
+                    <div className="lg:w-7/12 bg-stone-200 h-[500px] rounded-3xl"></div>
+                    <div className="lg:w-5/12 space-y-4">
+                        <div className="h-4 bg-stone-200 w-1/4 rounded"></div>
+                        <div className="h-10 bg-stone-200 w-3/4 rounded"></div>
+                        <div className="h-6 bg-stone-200 w-1/2 rounded"></div>
+                        <div className="h-24 bg-stone-200 w-full rounded"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!product) {
         return <div className="pt-28 text-center text-stone-600">Producto no encontrado.</div>;

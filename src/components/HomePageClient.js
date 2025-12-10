@@ -8,8 +8,8 @@ import ProductGrid from '@/components/home/ProductGrid';
 import Banner from '@/components/home/Banner';
 import BlogGallery from '@/components/home/BlogGallery';
 import { getProductImage } from '@/lib/utils';
-import Button from '@/components/ui/Button';
-import Link from 'next/link';
+import { useProducts } from '@/contexts/product-context';
+import { useContent } from '@/contexts/content-context';
 
 // Component Registry
 const SECTIONS = {
@@ -19,24 +19,64 @@ const SECTIONS = {
     'product_grid': ProductGrid,
     'banner': Banner,
     'blog_gallery': BlogGallery,
-    // Add 'rich_text' if implemented later
 };
 
-export default function HomePageClient({ products, content }) {
+function HomeSkeleton() {
+    return (
+        <div className="animate-pulse">
+            {/* Hero Skeleton */}
+            <div className="h-[70vh] w-full bg-stone-200" />
+
+            {/* Features Skeleton */}
+            <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <div key={i} className="h-40 bg-stone-200 rounded-lg" />)}
+            </div>
+
+            {/* Products Skeleton */}
+            <div className="max-w-7xl mx-auto px-6 py-12">
+                <div className="h-10 w-64 bg-stone-200 rounded mb-8 mx-auto" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="aspect-[4/5] bg-stone-200 rounded-lg" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function HomePageClient() {
+    const { products } = useProducts();
+    const { content, loading: contentLoading } = useContent();
+
+    // If content is strictly loading and null, show skeleton.
+    // If we have content (from cache), show it immediately even if revalidating.
+    if (contentLoading && !content) {
+        return <HomeSkeleton />;
+    }
+
+    // Prepare Data
     const productsWithImage = products.map(p => ({ ...p, image: getProductImage(p) }));
     const transferDiscount = content?.transferDiscount || 0;
 
-    // Parse Sections
-    // If "sections" exists in content, use it. Otherwise, use legacy structure logic or empty.
+    // Parse Sections Logic
     let sections = Array.isArray(content?.sections) ? content.sections : [];
 
-    // Fallback if DB hasn't been migrated or content is empty
+    // Fallback Legacy Logic
     if (sections.length === 0 && content) {
         if (content.heroSlider?.length) sections.push({ id: 'legacy-hero', type: 'hero_slider', data: { slides: content.heroSlider } });
         if (content.promoGrid?.length) sections.push({ id: 'legacy-promo', type: 'features_grid', data: { items: content.promoGrid } });
         if (content.flashDeal?.enabled) sections.push({ id: 'legacy-flash', type: 'flash_sale', data: content.flashDeal });
+
+        // Ensure "Featured" works even if products are loading (it will just be empty initially, or we pass loading state to ProductGrid)
         sections.push({ id: 'legacy-feat', type: 'product_grid', data: { title: 'Los Elegidos 🔥', filter: 'featured', count: 8 } });
+
         if (content.campaign?.bannerImage) sections.push({ id: 'legacy-camp', type: 'banner', data: { image: content.campaign.bannerImage, title: content.campaign.title, link: content.campaign.link, buttonText: 'Ver Campaña' } });
+    }
+
+    // Default Fallback if completely empty (e.g. first run DB)
+    if (sections.length === 0 && !contentLoading) {
+        return <div className="py-20 text-center text-stone-500">Configurando tienda...</div>;
     }
 
     return (
@@ -45,7 +85,6 @@ export default function HomePageClient({ products, content }) {
                 const Component = SECTIONS[section.type];
                 if (!Component) return null;
 
-                // Pass common props + section specific data
                 return (
                     <Component
                         key={section.id || index}
@@ -55,33 +94,6 @@ export default function HomePageClient({ products, content }) {
                     />
                 );
             })}
-
-
-            {/* Always show legacy About footer for now, or make it a section too? 
-                 The user asked for modular. I will create a TextSection if needed, but for now 
-                 I'll render the legacy About section ONLY if not present in sections to avoid losing it.
-             */}
-            {/* {!sections.find(s => s.type === 'about') && content?.aboutTitle && (
-                <section className="bg-[#1a1a1a] text-white py-24">
-                    <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-                        <div>
-                            <h2 className="text-3xl font-serif font-bold mb-6 text-[#D4A373]">{content?.aboutTitle || "Sobre Nosotros"}</h2>
-                            <p className="text-stone-300 leading-relaxed mb-6">
-                                {content?.aboutText || "Nacimos con la misión de revalorizar el ritual del mate."}
-                            </p>
-                            <Link href="/shop" passHref>
-                                <Button variant="secondary">Conocé más</Button>
-                            </Link>
-                        </div>
-                        {content?.aboutImage1 && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <img src={content.aboutImage1} className="rounded-lg mt-8 w-full h-full object-cover" alt="About" />
-                                {content.aboutImage2 && <img src={content.aboutImage2} className="rounded-lg w-full h-full object-cover" alt="About" />}
-                            </div>
-                        )}
-                    </div>
-                </section>
-            )} */}
         </div>
     );
 }

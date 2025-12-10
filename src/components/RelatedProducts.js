@@ -1,57 +1,42 @@
 'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import { useProducts } from '@/contexts/product-context';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import ProductCard from '@/components/ProductCard';
+import ProductCard from './ProductCard';
 
 export default function RelatedProducts({ currentProductId, currentCategory }) {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { products: allProducts, loading } = useProducts();
+    const [displayProducts, setDisplayProducts] = useState([]);
     const scrollContainerRef = useRef(null);
 
     useEffect(() => {
-        async function fetchProducts() {
-            try {
-                const res = await fetch('/api/products');
-                if (res.ok) {
-                    const data = await res.json();
+        if (!allProducts || allProducts.length === 0) return;
 
-                    // Filter out current product
-                    let available = data.filter(p => p.id !== parseInt(currentProductId));
+        // Filter out current product
+        let available = allProducts.filter(p => p.id !== parseInt(currentProductId));
 
-                    // Cross-selling logic
-                    let prioritized = [];
-                    let others = [];
+        // Cross-selling logic
+        let prioritized = [];
+        let others = [];
 
-                    if (currentCategory === 'Mates') {
-                        prioritized = available.filter(p => ['Bombillas', 'Yerbas'].includes(p.category));
-                        others = available.filter(p => !['Bombillas', 'Yerbas'].includes(p.category));
-                    } else if (currentCategory === 'Termos') {
-                        prioritized = available.filter(p => ['Mates', 'Accesorios'].includes(p.category));
-                        others = available.filter(p => !['Mates', 'Accesorios'].includes(p.category));
-                    } else {
-                        // Default: same category or random
-                        prioritized = available.filter(p => p.category === currentCategory);
-                        others = available.filter(p => p.category !== currentCategory);
-                    }
-
-                    // Combine: Prioritized first, then others
-                    // Shuffle slightly to keep it fresh? For now just concat.
-                    const finalSelection = [...prioritized, ...others].slice(0, 8); // Limit to 8 items
-
-                    setProducts(finalSelection);
-                }
-            } catch (error) {
-                console.error('Error fetching related products:', error);
-            } finally {
-                setLoading(false);
-            }
+        if (currentCategory === 'Mates') {
+            prioritized = available.filter(p => ['Bombillas', 'Yerbas'].includes(p.category));
+            others = available.filter(p => !['Bombillas', 'Yerbas'].includes(p.category));
+        } else if (currentCategory === 'Termos') {
+            prioritized = available.filter(p => ['Mates', 'Accesorios'].includes(p.category));
+            others = available.filter(p => !['Mates', 'Accesorios'].includes(p.category));
+        } else {
+            // Default: same category or random
+            prioritized = available.filter(p => p.category === currentCategory);
+            others = available.filter(p => p.category !== currentCategory);
         }
 
-        if (currentProductId) {
-            fetchProducts();
-        }
-    }, [currentProductId, currentCategory]);
+        // Combine: Prioritized first, then others
+        const finalSelection = [...prioritized, ...others].slice(0, 8); // Limit to 8 items
+
+        setDisplayProducts(finalSelection);
+
+    }, [currentProductId, currentCategory, allProducts]);
 
     const scroll = (direction) => {
         if (scrollContainerRef.current) {
@@ -90,7 +75,8 @@ export default function RelatedProducts({ currentProductId, currentCategory }) {
         }
     };
 
-    if (loading || products.length === 0) return null;
+    if (loading && displayProducts.length === 0) return null; // Show nothing while loading if no products
+    if (!loading && displayProducts.length === 0) return null;
 
     return (
         <div className="mt-20 mb-10">
@@ -125,7 +111,7 @@ export default function RelatedProducts({ currentProductId, currentCategory }) {
                         WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)'
                     }}
                 >
-                    {products.map(product => (
+                    {displayProducts.map(product => (
                         <div key={product.id} className="min-w-[240px] md:min-w-[260px] snap-center">
                             <ProductCard product={product} variant="compact" />
                         </div>

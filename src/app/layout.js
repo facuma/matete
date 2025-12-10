@@ -7,6 +7,7 @@ import { ConditionalLayout } from '@/components/ConditionalLayout';
 import "@/styles/globals.css";
 import { prisma } from '@/lib/prisma';
 import { Toaster } from 'sonner';
+import { StoreProvider } from '@/contexts/store-context';
 
 export const metadata = {
   title: 'MATETÉ - El ritual de cada día',
@@ -25,11 +26,13 @@ export default async function RootLayout({ children }) {
         </Suspense>
         <SessionProvider>
           <CartProvider>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-            <WhatsAppButton />
-            <Toaster position="top-right" richColors />
+            <StoreProvider>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+              <WhatsAppButton />
+              <Toaster position="top-right" richColors />
+            </StoreProvider>
           </CartProvider>
         </SessionProvider>
       </body>

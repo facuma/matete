@@ -7,6 +7,7 @@ import { LayoutDashboard, Package, ShoppingCart, Users, Home, Tag, FileText, Set
 const navLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Productos', icon: Package },
+  { href: '/admin/categories', label: 'Categorías', icon: Tag },
   { href: '/admin/orders', label: 'Órdenes', icon: ShoppingCart },
   { href: '/admin/customers', label: 'Clientes', icon: Users },
   { href: '/admin/discounts', label: 'Descuentos', icon: Tag },

@@ -29,32 +29,9 @@ export const CartProvider = ({ children }) => {
     }, [cart]);
 
     const addToCart = async (product, qty = 1, options = {}) => {
-        // Validate stock availability before adding (silently - UI will show disabled state)
-        try {
-            const response = await fetch('/api/products');
-            const products = await response.json();
-            const currentProduct = products.find(p => p.id === product.id);
+        // Note: Strict stock validation is handled in checkout. 
+        // UI should prevent adding more than available using local store data.
 
-            if (!currentProduct) return false;
-
-            const availableStock = (currentProduct.stock || 0) - (currentProduct.reservedStock || 0);
-
-            const optionsString = JSON.stringify(Object.keys(options).sort().reduce((obj, key) => {
-                obj[key] = options[key];
-                return obj;
-            }, {}));
-            const cartId = `${product.id}-${optionsString}`;
-            const existingItem = cart.find(item => item.cartId === cartId);
-            const currentCartQuantity = existingItem ? existingItem.quantity : 0;
-            const totalQuantity = currentCartQuantity + qty;
-
-            // Silently prevent if exceeds stock
-            if (totalQuantity > availableStock) {
-                return false;
-            }
-        } catch (error) {
-            console.error('Error validating stock:', error);
-        }
 
         // Facebook Pixel Event: AddToCart
         event('AddToCart', {
