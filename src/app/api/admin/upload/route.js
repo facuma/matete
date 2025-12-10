@@ -85,3 +85,72 @@ export async function POST(request) {
         return NextResponse.json({ error: "Error uploading file" }, { status: 500 });
     }
 }
+
+export async function GET() {
+    try {
+        if (!supabaseAdmin) {
+            return NextResponse.json({ error: "Missing configuration" }, { status: 500 });
+        }
+
+        const { data, error } = await supabaseAdmin.storage
+            .from('products')
+            .list('uploads', {
+                limit: 100,
+                sortBy: { column: 'created_at', order: 'desc' }
+            });
+
+        if (error) {
+            console.error("Error listing files:", error);
+            return NextResponse.json({ error: "Failed to list files" }, { status: 500 });
+        }
+
+        const files = data
+            .filter(file => file.name !== '.emptyFolderPlaceholder')
+            .map(file => {
+                const { data: { publicUrl } } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(`uploads/${file.name}`);
+
+                return {
+                    name: file.name,
+                    url: publicUrl,
+                    created_at: file.created_at
+                };
+            });
+
+        return NextResponse.json(files);
+    } catch (error) {
+        console.error("Error getting files:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}
+
+export async function DELETE(request) {
+    try {
+        const { filename } = await request.json();
+
+        if (!filename) {
+            return NextResponse.json({ error: "Filename required" }, { status: 400 });
+        }
+
+        if (!supabaseAdmin) {
+            return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+        }
+
+        // Delete from 'products' bucket
+        const { error } = await supabaseAdmin.storage
+            .from('products')
+            .remove([`uploads/${filename}`]);
+
+        if (error) {
+            console.error("Supabase delete error:", error);
+            return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+
+    } catch (error) {
+        console.error("Error deleting file:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}

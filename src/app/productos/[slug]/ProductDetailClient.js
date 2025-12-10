@@ -75,7 +75,7 @@ export default function ProductDetailClient({ product, transferDiscount = 0 }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
 
                     {/* COLUMNA IZQUIERDA: GALERÍA */}
-                    <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 sticky top-24 h-fit">
+                    <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 top-24 h-fit">
 
                         {/* Thumbnails Verticales */}
                         {images.length > 1 && (

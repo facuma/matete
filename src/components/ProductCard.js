@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { ShoppingBag, Star } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useCart } from '@/contexts/cart-context';
-import { getProductImage } from '@/lib/utils';
+import { getProductImage, cn } from '@/lib/utils';
 
-export default function ProductCard({ product, variant = 'default', transferDiscount = 20 }) {
+export default function ProductCard({ product, variant = 'default', transferDiscount = 20, className = '' }) {
     const { addToCart } = useCart();
     const isCompact = variant === 'compact';
 
@@ -25,7 +25,12 @@ export default function ProductCard({ product, variant = 'default', transferDisc
         : 0;
 
     return (
-        <div className={`group bg-white rounded-xl shadow-sm transition-all duration-300 overflow-hidden border border-stone-100 flex flex-col h-full ${isCompact ? 'text-sm' : ''} ${isOutOfStock ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:shadow-xl'}`}>
+        <div className={cn(
+            "group bg-white rounded-xl shadow-sm transition-all duration-300 overflow-hidden border border-stone-100 flex flex-col h-full",
+            isCompact ? 'text-sm' : '',
+            isOutOfStock ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:shadow-xl',
+            className
+        )}>
             <div className={`relative overflow-hidden aspect-square ${isOutOfStock ? 'pointer-events-none' : 'cursor-pointer'}`}>
                 {isOutOfStock ? (
                     <div className="relative">
@@ -49,13 +54,16 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                         />
                         {/* Discount Badge */}
                         {hasDiscount && (
-                            <div className="absolute top-3 left-3 bg-[#FF3B30] text-white rounded-full w-12 h-12 flex flex-col items-center justify-center shadow-md z-10">
+                            <div className="absolute top-3 left-3 bg-[#D32F2F] text-white rounded-full w-11 h-11 flex flex-col items-center justify-center shadow-lg z-10 border-2 border-white ring-1 ring-black/5">
                                 <span className="text-xs font-bold leading-none">{discountPercentage}%</span>
-                                <span className="text-[10px] font-medium leading-none">OFF</span>
+                                <span className="text-[9px] font-medium leading-none mt-0.5">OFF</span>
                             </div>
                         )}
                         {/* Category Badge */}
-                        <div className={`absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full font-bold shadow-sm ${isCompact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'}`}>
+                        <div className={cn(
+                            "absolute top-3 right-3 bg-white/95 backdrop-blur-md rounded-full font-bold shadow-md border border-stone-100 text-stone-700",
+                            isCompact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
+                        )}>
                             {product.category}
                         </div>
                     </Link>
@@ -93,7 +101,7 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                             {/* Price Row */}
                             <div className="flex items-baseline gap-2 flex-wrap">
                                 {hasDiscount && (
-                                    <span className="text-stone-400 line-through text-sm">
+                                    <span className="text-stone-400 line-through text-xs font-medium">
                                         ${product.price.toLocaleString('es-AR')}
                                     </span>
                                 )}
@@ -103,9 +111,9 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                             </div>
 
                             {/* Transfer Price */}
-                            <div className="bg-emerald-50 rounded-lg p-2 mt-2 -ml-2 -mr-2">
-                                <p className="text-emerald-600 font-bold text-sm leading-tight">
-                                    ${transferPrice.toLocaleString('es-AR')} <span className="font-normal text-xs">con Transferencia o depósito</span>
+                            <div className="bg-[#F2F8F5] border border-[#dcfce7] rounded-md p-2 mt-2">
+                                <p className="text-[#109f59] font-bold text-sm leading-tight">
+                                    ${transferPrice.toLocaleString('es-AR')} <span className="font-medium text-[10px] uppercase text-[#109f59]/80 ml-1">Transferencia</span>
                                 </p>
                             </div>
                         </div>
@@ -119,10 +127,10 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                         regularPrice: product.price
                     })}
                     variant="primary"
-                    className={`w-full flex items-center justify-center gap-2 ${isCompact ? 'py-1.5 text-xs' : 'py-2 text-sm'}`}
+                    className={`w-full flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95 ${isCompact ? 'py-1.5 text-xs' : 'py-2 text-sm'}`}
                     disabled={isOutOfStock}
                 >
-                    <span>{isOutOfStock ? 'No Disponible' : 'Agregar'}</span>
+                    <span>{isOutOfStock ? 'No Disponible' : 'Agregar al carrito'}</span>
                     {!isOutOfStock && <ShoppingBag size={isCompact ? 14 : 16} />}
                 </Button>
             </div>

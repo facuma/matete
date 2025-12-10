@@ -152,11 +152,14 @@ model DeviceToken {
 model HomePageContent {
   id             Int      @id @default(1)
   
-  // New JSON Structures
-  heroSlider     Json?    @default("[]") // Array of { id, title, subtitle, image, ctaText, link }
-  promoGrid      Json?    @default("[]") // Array of { title, subtitle, icon, color }
-  flashDeal      Json?    @default("{}") // Object { enabled, endTime, productIds }
-  campaign       Json?    @default("{}") // Object { title, bannerImage, collectionTag, link }
+  // Modular Architecture
+  sections       Json?    @default("[]") // Array of { id, type, data }
+
+  // Legacy JSON Structures (kept for backup, will be migrated to sections)
+  heroSlider     Json?    @default("[]")
+  promoGrid      Json?    @default("[]")
+  flashDeal      Json?    @default("{}")
+  campaign       Json?    @default("{}")
 
   // Legacy fields (optional, kept for safety or if needed by other components temporarily)
   heroTitle      String?   @default("MATETÉ")

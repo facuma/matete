@@ -15,7 +15,15 @@ export async function GET() {
             });
         }
 
-        return NextResponse.json(content);
+        // Fetch Site Settings for Transfer Discount
+        const settings = await prisma.siteSettings.findFirst({
+            select: { transferDiscountPercentage: true }
+        });
+
+        return NextResponse.json({
+            ...content,
+            transferDiscount: settings?.transferDiscountPercentage || 0
+        });
     } catch (error) {
         console.error('Error fetching home page content:', error);
         return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 });
@@ -37,7 +45,12 @@ export async function PUT(request) {
         const content = await prisma.homePageContent.upsert({
             where: { id: 1 },
             update: {
-                heroTitle: body.heroTitle,
+                sections: body.sections, // New modular field
+                heroSlider: body.heroSlider,
+                promoGrid: body.promoGrid,
+                flashDeal: body.flashDeal,
+                campaign: body.campaign,
+                heroTitle: body.heroTitle, // Keeping backward compatibility if needed
                 heroSubtitle: body.heroSubtitle,
                 heroButtonText: body.heroButtonText,
                 heroImage: body.heroImage,
@@ -47,6 +60,11 @@ export async function PUT(request) {
                 aboutImage2: body.aboutImage2,
             },
             create: {
+                sections: body.sections,
+                heroSlider: body.heroSlider,
+                promoGrid: body.promoGrid,
+                flashDeal: body.flashDeal,
+                campaign: body.campaign,
                 heroTitle: body.heroTitle,
                 heroSubtitle: body.heroSubtitle,
                 heroButtonText: body.heroButtonText,

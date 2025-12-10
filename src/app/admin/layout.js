@@ -6,9 +6,10 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
+  const isPreviewPage = pathname?.startsWith('/admin/preview');
 
-  // Don't show sidebar on login page
-  if (isLoginPage) {
+  // Don't show sidebar on login or preview page
+  if (isLoginPage || isPreviewPage) {
     return <>{children}</>;
   }
 
