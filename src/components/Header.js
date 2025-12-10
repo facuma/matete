@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { ShoppingBag, Menu, User, LogOut } from 'lucide-react';
+import { ShoppingBag, Menu, User, LogOut, Settings } from 'lucide-react';
 import { useCart } from '@/contexts/cart-context';
 
 export default function Header() {
@@ -39,10 +39,17 @@ export default function Header() {
 
                     {session?.user ? (
                         <>
-                            <Link href="/my-orders" className={`hover:text-[#D4A373] transition-colors flex items-center gap-1 ${pathname === '/my-orders' ? 'text-[#D4A373]' : ''}`}>
-                                <User size={18} />
-                                Mis Pedidos
-                            </Link>
+                            {session.user.role === 'admin' ? (
+                                <Link href="/admin" className={`hover:text-[#D4A373] transition-colors flex items-center gap-1 ${pathname.startsWith('/admin') ? 'text-[#D4A373]' : ''}`}>
+                                    <Settings size={18} />
+                                    Administrar Tienda
+                                </Link>
+                            ) : (
+                                <Link href="/my-orders" className={`hover:text-[#D4A373] transition-colors flex items-center gap-1 ${pathname === '/my-orders' ? 'text-[#D4A373]' : ''}`}>
+                                    <User size={18} />
+                                    Mis Pedidos
+                                </Link>
+                            )}
                             <button
                                 onClick={() => signOut({ callbackUrl: '/' })}
                                 className="hover:text-[#D4A373] transition-colors flex items-center gap-1"
@@ -74,9 +81,15 @@ export default function Header() {
                     {navLinks.map(link => <Link key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="text-left py-2 hover:text-[#D4A373]">{link.label}</Link>)}
                     {session?.user ? (
                         <>
-                            <Link href="/my-orders" onClick={() => setIsMenuOpen(false)} className="text-left py-2 hover:text-[#D4A373] flex items-center gap-2">
-                                <User size={18} /> Mis Pedidos
-                            </Link>
+                            {session.user.role === 'admin' ? (
+                                <Link href="/admin" onClick={() => setIsMenuOpen(false)} className="text-left py-2 hover:text-[#D4A373] flex items-center gap-2">
+                                    <Settings size={18} /> Administrar Tienda
+                                </Link>
+                            ) : (
+                                <Link href="/my-orders" onClick={() => setIsMenuOpen(false)} className="text-left py-2 hover:text-[#D4A373] flex items-center gap-2">
+                                    <User size={18} /> Mis Pedidos
+                                </Link>
+                            )}
                             <button onClick={() => signOut({ callbackUrl: '/' })} className="text-left py-2 hover:text-[#D4A373] flex items-center gap-2">
                                 <LogOut size={18} /> Salir
                             </button>
