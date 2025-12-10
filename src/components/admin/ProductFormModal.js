@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
+import ImagePicker from '@/components/admin/ImagePicker';
+
 export default function ProductFormModal({ isOpen, onClose, product, onSave, allProducts = [] }) {
     const [formData, setFormData] = useState({
         name: '',
@@ -12,6 +14,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         category: 'Mates',
         description: '',
         imageUrl: '',
+        images: [],
         featured: false,
         rating: 5,
         options: [],
@@ -21,12 +24,10 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         stock: 0,
         lowStockThreshold: 5
     });
-    const [uploading, setUploading] = useState(false);
-    const [inputType, setInputType] = useState('upload'); // 'upload' or 'url'
+    // Removed old upload/url states
     const [showProductSelector, setShowProductSelector] = useState(false);
     const [currentOptionIndex, setCurrentOptionIndex] = useState(null);
     const [productSearch, setProductSearch] = useState('');
-    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (product) {
@@ -54,7 +55,6 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 images: [],
                 featured: false,
                 rating: 5,
-                rating: 5,
                 options: [],
                 slug: '',
                 metaTitle: '',
@@ -65,51 +65,13 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         }
     }, [product, isOpen]);
 
-    const handleFileChange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploading(true);
-        const data = new FormData();
-        data.append('file', file);
-
-        try {
-            const res = await fetch('/api/admin/upload', {
-                method: 'POST',
-                body: data
-            });
-
-            if (!res.ok) throw new Error('Upload failed');
-
-            const { imageUrl } = await res.json();
-
-            // Add to gallery
-            const newImages = [...(formData.images || []), imageUrl];
-
-            setFormData(prev => ({
-                ...prev,
-                images: newImages,
-                // Set as cover if it's the first image
-                imageUrl: (!prev.imageUrl && newImages.length === 1) ? imageUrl : prev.imageUrl
-            }));
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            alert('Error al subir la imagen');
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleUrlAdd = () => {
-        if (!formData.tempUrlInput) return;
-
-        const newImages = [...(formData.images || []), formData.tempUrlInput];
+    const handleImageSelect = (url) => {
+        const newImages = [...(formData.images || []), url];
         setFormData(prev => ({
             ...prev,
             images: newImages,
-            // Set as cover if it's the first image
-            imageUrl: (!prev.imageUrl && newImages.length === 1) ? formData.tempUrlInput : prev.imageUrl,
-            tempUrlInput: ''
+            // Set as cover if it's the first image or if no cover exists
+            imageUrl: (!prev.imageUrl || prev.imageUrl === '') ? url : prev.imageUrl
         }));
     };
 
@@ -135,6 +97,8 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
         setFormData({ ...formData, imageUrl: url });
     };
 
+    // ... (rest of handlers like handleSubmit, handleProductSelect)
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
@@ -159,6 +123,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+                {/* Header ... */}
                 <div className="p-6 border-b border-stone-200 flex justify-between items-center sticky top-0 bg-white z-10">
                     <h2 className="text-2xl font-bold text-stone-800">
                         {product ? 'Editar Producto' : 'Nuevo Producto'}
@@ -169,6 +134,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    {/* ... (Existing fields for Name, Price, etc. remain unchanged) ... */}
                     <div>
                         <label className="block text-sm font-medium text-stone-700 mb-1">
                             Nombre del Producto *
@@ -307,73 +273,23 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                         />
                     </div>
 
-                    {/* Image Upload Section */}
-                    {/* Image Gallery Section */}
+                    {/* Image Gallery Section using ImagePicker */}
                     <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
                         <label className="block text-sm font-medium text-stone-700 mb-3">
                             Galería de Imágenes
                         </label>
                         <p className="text-xs text-stone-500 mb-4">La imagen marcada con ★ será la portada.</p>
 
-                        <div className="flex gap-4 mb-4">
-                            <button
-                                type="button"
-                                onClick={() => setInputType('upload')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${inputType === 'upload'
-                                    ? 'bg-stone-800 text-white'
-                                    : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-100'
-                                    }`}
-                            >
-                                <Upload size={16} /> Subir Archivo
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInputType('url')}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${inputType === 'url'
-                                    ? 'bg-stone-800 text-white'
-                                    : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-100'
-                                    }`}
-                            >
-                                <LinkIcon size={16} /> URL Externa
-                            </button>
-                        </div>
-
-                        <div className="flex gap-2 mb-4">
-                            {inputType === 'upload' ? (
-                                <div className="flex items-center gap-4">
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileChange}
-                                        accept="image/*"
-                                        className="hidden"
-                                    />
-                                    <Button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        variant="secondary"
-                                        disabled={uploading}
-                                    >
-                                        {uploading ? 'Subiendo...' : 'Seleccionar Imagen'}
+                        <div className="mb-4">
+                            <ImagePicker
+                                onSelect={handleImageSelect}
+                                trigger={(
+                                    <Button type="button" variant="secondary" className="w-full md:w-auto flex items-center gap-2 justify-center">
+                                        <Upload size={16} />
+                                        Agregar Imagen
                                     </Button>
-                                    <span className="text-sm text-stone-500">
-                                        {uploading ? 'Procesando...' : 'JPG, PNG, WEBP'}
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="flex w-full gap-2">
-                                    <input
-                                        type="url"
-                                        value={formData.tempUrlInput || ''}
-                                        onChange={(e) => setFormData({ ...formData, tempUrlInput: e.target.value })}
-                                        className="flex-1 p-2 rounded-lg border border-stone-200 focus:border-stone-800 outline-none text-sm"
-                                        placeholder="https://ejemplo.com/imagen.jpg"
-                                    />
-                                    <Button type="button" onClick={handleUrlAdd} size="sm">
-                                        Agregar
-                                    </Button>
-                                </div>
-                            )}
+                                )}
+                            />
                         </div>
 
                         {/* Gallery Grid */}
