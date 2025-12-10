@@ -15,7 +15,7 @@ export default function FeaturesGrid({ data }) {
     return (
         <section className="py-12 bg-stone-50 border-b border-stone-200">
             <div className="max-w-7xl mx-auto px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="flex flex-wrap justify-center gap-8">
                     {items.map((item, idx) => {
                         const Icon = IconMap[item.icon] || ShieldCheck;
                         return (

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import { Save, Plus, Trash2, ArrowUp, ArrowDown, Layout, Image as ImageIcon, Tag, Percent, Monitor, Type, Smartphone, Monitor as MonitorIcon, Eye, EyeOff } from 'lucide-react';
 import ImagePicker from '@/components/admin/ImagePicker';
+import EditorSkeleton from '@/components/admin/EditorSkeleton';
+import BlogGalleryEditor from '@/components/admin/editors/BlogGalleryEditor';
 import { toast } from 'sonner';
 
 // --- CONFIGURATION SCHEMAS ---
@@ -13,7 +15,7 @@ const SECTION_TYPES = [
     { id: 'flash_sale', label: 'Flash Sale (Oferta)', icon: Percent },
     { id: 'product_grid', label: 'Grilla Productos', icon: Layout },
     { id: 'banner', label: 'Banner Campaña', icon: ImageIcon },
-    // { id: 'rich_text', label: 'Texto / About', icon: Type }
+    { id: 'blog_gallery', label: 'Galería de Blogs', icon: Type },
 ];
 
 export default function AdminContentPage() {
@@ -122,7 +124,14 @@ export default function AdminContentPage() {
         }
     };
 
-    if (loading) return <div className="p-10 text-center">Cargando constructor...</div>;
+    if (loading) {
+        // Removed blocking loader
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <EditorSkeleton />
+            </div>
+        );
+    }
 
     return (
         <div className="pb-10">
@@ -158,7 +167,7 @@ export default function AdminContentPage() {
                             </button>
                         </div>
                     )}
-                    <Button onClick={handleSubmit} disabled={saving} className="flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all">
+                    <Button onClick={handleSubmit} disabled={saving || loading} className="flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all">
                         <Save size={18} /> {saving ? 'Guardando...' : 'Publicar'}
                     </Button>
                 </div>
@@ -169,18 +178,26 @@ export default function AdminContentPage() {
 
                     {/* LEFT COLUMN: EDITOR */}
                     <div className={`${showPreview ? 'lg:col-span-5' : 'lg:col-span-8 lg:col-start-3'} space-y-6 transition-all duration-300`}>
-                        {sections.map((section, index) => (
-                            <SectionEditor
-                                key={section.id}
-                                section={section}
-                                index={index}
-                                total={sections.length}
-                                onMove={moveSection}
-                                onRemove={removeSection}
-                                onChange={(data) => updateSectionData(section.id, data)}
-                                products={products}
-                            />
-                        ))}
+                        {loading ? (
+                            <>
+                                <EditorSkeleton />
+                                <EditorSkeleton />
+                                <EditorSkeleton />
+                            </>
+                        ) : (
+                            sections.map((section, index) => (
+                                <SectionEditor
+                                    key={section.id}
+                                    section={section}
+                                    index={index}
+                                    total={sections.length}
+                                    onMove={moveSection}
+                                    onRemove={removeSection}
+                                    onChange={(data) => updateSectionData(section.id, data)}
+                                    products={products}
+                                />
+                            ))
+                        )}
 
                         {sections.length === 0 && (
                             <div className="text-center py-16 border-2 border-dashed border-stone-300 rounded-xl text-stone-400 bg-stone-50">
@@ -212,7 +229,7 @@ export default function AdminContentPage() {
 
                     {/* RIGHT COLUMN: PREVIEW */}
                     {showPreview && (
-                        <div className="hidden lg:flex lg:col-span-7 sticky top-24 pl-4 items-center justify-center h-auto">
+                        <div className="hidden lg:flex lg:col-span-7 sticky top-24 self-start pl-4 items-center justify-center h-auto">
                             <div
                                 className={`bg-stone-900 p-4 shadow-2xl border-4 border-stone-800 overflow-hidden relative flex flex-col items-center justify-center transition-all duration-500 ${previewMode === 'mobile'
                                     ? 'w-[360px] aspect-[9/19] rounded-[3rem]' // Mobile: width-based, vertical
@@ -260,7 +277,7 @@ function PreviewFrame({ sections, products }) {
         return () => window.removeEventListener('message', handler);
     }, []);
 
-    // Send data whenever it changes
+    // Send data whenever it changes and we are ready
     useEffect(() => {
         if (ready && iframeRef.current) {
             iframeRef.current.contentWindow.postMessage({
@@ -272,17 +289,31 @@ function PreviewFrame({ sections, products }) {
 
     // Also send immediately on load if ready (in case of re-renders)
     const handleLoad = () => {
-        setReady(true);
+        // Fallback for readiness if message event is missed or slow
+        if (!ready) {
+            setTimeout(() => setReady(true), 500);
+        }
     };
 
     return (
-        <iframe
-            ref={iframeRef}
-            src="/admin/preview"
-            className="w-full h-full border-0"
-            title="Live Preview"
-            onLoad={handleLoad}
-        />
+        <div className="relative w-full h-full">
+            {!ready && (
+                <div className="absolute inset-0 z-10 bg-stone-100 animate-pulse flex flex-col items-center justify-center space-y-4">
+                    <div className="w-10 h-10 border-4 border-stone-300 border-t-[#8B5A2B] rounded-full animate-spin"></div>
+                    <div className="space-y-2 w-3/4">
+                        <div className="h-4 bg-stone-200 rounded w-full"></div>
+                        <div className="h-4 bg-stone-200 rounded w-2/3 mx-auto"></div>
+                    </div>
+                </div>
+            )}
+            <iframe
+                ref={iframeRef}
+                src="/admin/preview"
+                className={`w-full h-full border-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
+                title="Live Preview"
+                onLoad={handleLoad}
+            />
+        </div>
     );
 }
 
@@ -294,6 +325,11 @@ function getDefaultDataForType(type) {
         case 'flash_sale': return { enabled: true, endTime: '', productIds: [] };
         case 'product_grid': return { title: 'Productos Destacados', subtitle: '', count: 4, filter: 'latest' };
         case 'banner': return { image: '', title: 'Campaña Especial', link: '/shop', buttonText: 'Ver Más' };
+        case 'blog_gallery': return {
+            title: 'Nuestras Novedades',
+            subtitle: 'Enterate de lo último en el mundo del mate',
+            posts: [{ title: 'Nuevo ingreso de Yerbas', excerpt: 'Conocé las nuevas variedades orgánicas que llegaron.', link: '/blog/yerbas', image: '' }]
+        };
         case 'rich_text': return { content: '' };
         default: return {};
     }
@@ -346,6 +382,7 @@ function SectionEditor({ section, index, total, onMove, onRemove, onChange, prod
                     {section.type === 'flash_sale' && <FlashSaleEditor data={section.data} onChange={onChange} products={products} />}
                     {section.type === 'product_grid' && <ProductGridEditor data={section.data} onChange={onChange} />}
                     {section.type === 'banner' && <BannerEditor data={section.data} onChange={onChange} />}
+                    {section.type === 'blog_gallery' && <BlogGalleryEditor data={section.data} onChange={onChange} />}
                 </div>
             )}
         </div>
@@ -394,7 +431,7 @@ function HeroEditor({ data, onChange }) {
                     </div>
                 </div>
             ))}
-            <Button size="sm" variant="outline" onClick={addSlide} className="w-full border-dashed border-2 hover:border-[#8B5A2B] hover:text-[#8B5A2B]"><Plus size={16} className="mr-2" /> Agregar Slide</Button>
+            <Button size="sm" variant="outline" onClick={addSlide} className="w-full border-dashed border-2 border-stone-300 text-stone-500 hover:border-[#8B5A2B] hover:text-[#8B5A2B] hover:bg-stone-50"><Plus size={16} className="mr-2" /> Agregar Slide</Button>
         </div>
     );
 }
@@ -455,6 +492,7 @@ function FlashSaleEditor({ data, onChange, products }) {
 
     return (
         <div className="space-y-6">
+            {/* Logic Settings */}
             <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex-1">
                     <Field label="Fecha de Finalización">
@@ -472,6 +510,24 @@ function FlashSaleEditor({ data, onChange, products }) {
                 </div>
             </div>
 
+            {/* Design Settings */}
+            <div className="border-t border-stone-100 pt-6 grid md:grid-cols-12 gap-6">
+                <div className="md:col-span-4">
+                    <Field label="Imagen de Fondo">
+                        <ImagePicker currentImage={data.backgroundImage} onSelect={(url) => onChange({ ...data, backgroundImage: url })} />
+                    </Field>
+                </div>
+                <div className="md:col-span-8 space-y-4">
+                    <Field label="Título Principal">
+                        <input type="text" placeholder="Ej: Flash Deals" value={data.title || ''} onChange={(e) => onChange({ ...data, title: e.target.value })} className="w-full p-2 border border-stone-300 rounded-lg text-sm" />
+                    </Field>
+                    <Field label="Subtítulo">
+                        <input type="text" placeholder="Ej: Aprovechá estos descuentos exclusivos" value={data.subtitle || ''} onChange={(e) => onChange({ ...data, subtitle: e.target.value })} className="w-full p-2 border border-stone-300 rounded-lg text-sm" />
+                    </Field>
+                </div>
+            </div>
+
+            {/* Product Selection */}
             <Field label="Seleccionar Productos en Oferta">
                 <div className="h-60 overflow-y-auto border border-stone-200 p-2 rounded-xl bg-stone-50 grid grid-cols-2 md:grid-cols-3 gap-2">
                     {products.map(p => (

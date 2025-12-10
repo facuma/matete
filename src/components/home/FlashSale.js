@@ -41,7 +41,7 @@ export default function FlashSale({ data, products = [], transferDiscount = 0 })
             <div
                 className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
                 style={{
-                    backgroundImage: "url('/flash-bg.png')",
+                    backgroundImage: `url('${data.backgroundImage || '/flash-bg.png'}')`,
                     backgroundSize: 'cover',
                     filter: 'brightness(0.9)'
                 }}
@@ -55,9 +55,11 @@ export default function FlashSale({ data, products = [], transferDiscount = 0 })
                             <Clock size={14} /> Oferta Limitada
                         </div>
                         <h2 className="text-4xl md:text-5xl font-serif font-bold text-white drop-shadow-lg mb-2">
-                            Flash Deals <span className="text-[#D4A373]">⚡️</span>
+                            {data.title || 'Flash Deals'} <span className="text-[#D4A373]">⚡️</span>
                         </h2>
-                        <p className="text-white/90 font-medium drop-shadow-md">Aprovechás estos descuentos exclusivos por tiempo limitado.</p>
+                        <p className="text-white/90 font-medium drop-shadow-md">
+                            {data.subtitle || 'Aprovechás estos descuentos exclusivos por tiempo limitado.'}
+                        </p>
                     </div>
 
                     <div className="flex gap-3 text-center">

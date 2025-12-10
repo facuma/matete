@@ -6,6 +6,7 @@ import FeaturesGrid from '@/components/home/FeaturesGrid';
 import FlashSale from '@/components/home/FlashSale';
 import ProductGrid from '@/components/home/ProductGrid';
 import Banner from '@/components/home/Banner';
+import BlogGallery from '@/components/home/BlogGallery';
 import { getProductImage } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';
@@ -17,6 +18,7 @@ const SECTIONS = {
     'flash_sale': FlashSale,
     'product_grid': ProductGrid,
     'banner': Banner,
+    'blog_gallery': BlogGallery,
     // Add 'rich_text' if implemented later
 };
 
@@ -59,7 +61,7 @@ export default function HomePageClient({ products, content }) {
                  The user asked for modular. I will create a TextSection if needed, but for now 
                  I'll render the legacy About section ONLY if not present in sections to avoid losing it.
              */}
-            {!sections.find(s => s.type === 'about') && content?.aboutTitle && (
+            {/* {!sections.find(s => s.type === 'about') && content?.aboutTitle && (
                 <section className="bg-[#1a1a1a] text-white py-24">
                     <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
                         <div>
@@ -79,7 +81,7 @@ export default function HomePageClient({ products, content }) {
                         )}
                     </div>
                 </section>
-            )}
+            )} */}
         </div>
     );
 }

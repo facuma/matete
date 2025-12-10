@@ -168,7 +168,7 @@ export default function AdminProductsPage() {
         <div className="flex gap-3">
           <Button
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-white border-stone-300 text-stone-700 hover:bg-stone-50"
             onClick={() => setIsUploadOpen(true)}
           >
             <Upload size={20} />

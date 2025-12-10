@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import { cn } from '@/lib/utils';
 
 const Button = ({ children, onClick, variant = 'primary', size = 'default', className = '', type = 'button', disabled = false }) => {
     const baseStyle = "rounded-md font-medium transition-all duration-300 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -23,7 +23,7 @@ const Button = ({ children, onClick, variant = 'primary', size = 'default', clas
             type={type}
             onClick={onClick}
             disabled={disabled}
-            className={`${baseStyle} ${sizes[size] || sizes.default} ${variants[variant]} ${className}`}
+            className={cn(baseStyle, sizes[size] || sizes.default, variants[variant], className)}
         >
             {children}
         </button>
