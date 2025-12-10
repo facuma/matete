@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartSidebar from '@/components/CartSidebar';
+import CookieBanner from '@/components/CookieBanner';
 
 export function ConditionalLayout({ children }) {
     const pathname = usePathname();
@@ -21,6 +22,7 @@ export function ConditionalLayout({ children }) {
             <CartSidebar />
             <main className="flex-grow bg-[#FAF9F6]">{children}</main>
             <Footer />
+            <CookieBanner />
         </>
     );
 }

@@ -54,7 +54,7 @@ export default function ProductCard({ product, variant = 'default', transferDisc
                         />
                         {/* Discount Badge */}
                         {hasDiscount && (
-                            <div className="absolute top-3 left-3 bg-[#D32F2F] text-white rounded-full w-11 h-11 flex flex-col items-center justify-center shadow-lg z-10 border-2 border-white ring-1 ring-black/5">
+                            <div className="absolute top-3 left-3 bg-[#8B5A2B] text-white rounded-full w-11 h-11 flex flex-col items-center justify-center shadow-lg z-10 border-2 border-white ring-1 ring-black/5">
                                 <span className="text-xs font-bold leading-none">{discountPercentage}%</span>
                                 <span className="text-[9px] font-medium leading-none mt-0.5">OFF</span>
                             </div>

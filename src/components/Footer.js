@@ -33,6 +33,7 @@ export default function Footer() {
                         <li><Link href="/terminos" className="cursor-pointer hover:text-white">Términos y Condiciones</Link></li>
                         <li><Link href="/privacidad" className="cursor-pointer hover:text-white">Política de Privacidad</Link></li>
                         <li><Link href="/cambios-devoluciones" className="cursor-pointer hover:text-white">Cambios y Devoluciones</Link></li>
+                        <li><Link href="/politica-de-cookies" className="cursor-pointer hover:text-white">Política de Cookies</Link></li>
                     </ul>
                 </div>
                 <div>
