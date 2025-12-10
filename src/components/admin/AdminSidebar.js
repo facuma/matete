@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, ShoppingCart, Users, Home, Tag, FileText, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Users, Home, Tag, FileText, Settings, Image } from 'lucide-react';
 
 const navLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const navLinks = [
   { href: '/admin/promociones', label: 'Promociones', icon: FileText },
   { href: '/admin/settings', label: 'Configuración', icon: Settings },
   { href: '/admin/settings/payments', label: 'Pagos', icon: FileText },
+  { href: '/admin/images', label: 'Imágenes', icon: Image },
 ];
 
 export default function AdminSidebar() {

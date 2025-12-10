@@ -7,9 +7,10 @@ export async function POST(request) {
     try {
         const formData = await request.formData();
         const file = formData.get("file");
+        const url = formData.get("url");
 
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        if (!file && !url) {
+            return NextResponse.json({ error: "No file or URL provided" }, { status: 400 });
         }
 
         // Validate server configuration
@@ -18,9 +19,27 @@ export async function POST(request) {
             return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
-        // Convert file to buffer
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        // Convert file or URL to buffer
+        let buffer;
+        let originalFilename;
+
+        if (file) {
+            const bytes = await file.arrayBuffer();
+            buffer = Buffer.from(bytes);
+            originalFilename = file.name;
+        } else if (url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Failed to fetch image from URL");
+                const arrayBuffer = await response.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
+                // Extract filename from URL or use default
+                originalFilename = url.split('/').pop().split('?')[0] || 'imported-image.jpg';
+            } catch (fetchError) {
+                console.error("Error fetching URL:", fetchError);
+                return NextResponse.json({ error: "Failed to fetch image from URL" }, { status: 400 });
+            }
+        }
 
         // OPTIMIZATION: Resize & Compress BEFORE Upload
         let optimizedBuffer;
@@ -37,7 +56,7 @@ export async function POST(request) {
 
         // Create unique filename (ensure .webp extension if optimized)
         const timestamp = Date.now();
-        const originalName = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
+        const originalName = originalFilename.replace(/\.[^/.]+$/, "").replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '');
         const filename = `${timestamp}-${originalName}.webp`;
 
         // Upload One Optimized File
