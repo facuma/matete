@@ -12,7 +12,9 @@ const navLinks = [
   { href: '/admin/discounts', label: 'Descuentos', icon: Tag },
   { href: '/admin/blog', label: 'Blog', icon: FileText },
   { href: '/admin/content', label: 'Editar Home', icon: Home },
+  { href: '/admin/promociones', label: 'Promociones', icon: FileText },
   { href: '/admin/settings', label: 'Configuración', icon: Settings },
+  { href: '/admin/settings/payments', label: 'Pagos', icon: FileText },
 ];
 
 export default function AdminSidebar() {

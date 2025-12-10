@@ -7,13 +7,22 @@ import Button from '@/components/ui/Button';
 import { useCart } from '@/contexts/cart-context';
 import { getProductImage } from '@/lib/utils';
 
-export default function ProductCard({ product, variant = 'default' }) {
+export default function ProductCard({ product, variant = 'default', transferDiscount = 20 }) {
     const { addToCart } = useCart();
     const isCompact = variant === 'compact';
 
     // Calculate available stock
     const availableStock = (product.stock || 0) - (product.reservedStock || 0);
     const isOutOfStock = availableStock <= 0;
+
+    // Price Logic
+    const TRANSFER_DISCOUNT_DECIMAL = transferDiscount / 100;
+    const currentPrice = product.promotionalPrice || product.price;
+    const transferPrice = currentPrice * (1 - TRANSFER_DISCOUNT_DECIMAL);
+    const hasDiscount = !!product.promotionalPrice;
+    const discountPercentage = hasDiscount
+        ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
+        : 0;
 
     return (
         <div className={`group bg-white rounded-xl shadow-sm transition-all duration-300 overflow-hidden border border-stone-100 flex flex-col h-full ${isCompact ? 'text-sm' : ''} ${isOutOfStock ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:shadow-xl'}`}>
@@ -38,6 +47,14 @@ export default function ProductCard({ product, variant = 'default' }) {
                             alt={product.name}
                             className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                         />
+                        {/* Discount Badge */}
+                        {hasDiscount && (
+                            <div className="absolute top-3 left-3 bg-[#FF3B30] text-white rounded-full w-12 h-12 flex flex-col items-center justify-center shadow-md z-10">
+                                <span className="text-xs font-bold leading-none">{discountPercentage}%</span>
+                                <span className="text-[10px] font-medium leading-none">OFF</span>
+                            </div>
+                        )}
+                        {/* Category Badge */}
                         <div className={`absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full font-bold shadow-sm ${isCompact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'}`}>
                             {product.category}
                         </div>
@@ -72,25 +89,26 @@ export default function ProductCard({ product, variant = 'default' }) {
                             </span>
                         </div>
                     ) : (
-                        <>
-                            {product.promotionalPrice ? (
-                                <div className="flex items-center gap-2">
-                                    <span className={`text-stone-400 line-through font-light ${isCompact ? 'text-xs' : 'text-sm'}`}>
+                        <div className="flex flex-col">
+                            {/* Price Row */}
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                                {hasDiscount && (
+                                    <span className="text-stone-400 line-through text-sm">
                                         ${product.price.toLocaleString('es-AR')}
                                     </span>
-                                    <span className={`font-serif text-[#1a1a1a] font-semibold ${isCompact ? 'text-lg' : 'text-xl'}`}>
-                                        ${product.promotionalPrice.toLocaleString('es-AR')}
-                                    </span>
-                                    <span className="bg-[#1a1a1a] text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-                                        {Math.round(((product.price - product.promotionalPrice) / product.price) * 100)}% OFF
-                                    </span>
-                                </div>
-                            ) : (
-                                <p className={`font-serif text-[#1a1a1a] font-semibold ${isCompact ? 'text-lg' : 'text-xl'}`}>
-                                    ${product.price.toLocaleString('es-AR')}
+                                )}
+                                <span className={`font-serif text-[#8B5A2B] font-bold ${isCompact ? 'text-lg' : 'text-xl'}`}>
+                                    ${currentPrice.toLocaleString('es-AR')}
+                                </span>
+                            </div>
+
+                            {/* Transfer Price */}
+                            <div className="bg-emerald-50 rounded-lg p-2 mt-2 -ml-2 -mr-2">
+                                <p className="text-emerald-600 font-bold text-sm leading-tight">
+                                    ${transferPrice.toLocaleString('es-AR')} <span className="font-normal text-xs">con Transferencia o depósito</span>
                                 </p>
-                            )}
-                        </>
+                            </div>
+                        </div>
                     )}
                 </div>
 

@@ -191,16 +191,48 @@ export default function CheckoutPage() {
     };
     */
 
+    const [transferDiscount, setTransferDiscount] = useState(0);
+
+    // Fetch transfer discount on mount
+    useEffect(() => {
+        fetch('/api/promotions/transfer')
+            .then(res => res.json())
+            .then(data => setTransferDiscount(data.discount || 0))
+            .catch(err => console.error('Error fetching transfer discount:', err));
+    }, []);
+
+    // Calculate totals helper
+    const calculateTotals = () => {
+        let subtotal = cartSubtotal;
+        let discountAmount = cartSavings;
+        let total = cartTotal;
+
+        // Apply coupon discount first
+        if (appliedDiscount) {
+            const couponDiscountFn = total * (appliedDiscount.percentage / 100);
+            total -= couponDiscountFn;
+        }
+
+        // Apply transfer discount if selected
+        let transferDiscountAmount = 0;
+        if (selectedMethod === 'transfer' && transferDiscount > 0) {
+            transferDiscountAmount = total * (transferDiscount / 100);
+            total -= transferDiscountAmount;
+        }
+
+        // Add shipping
+        if (selectedShipping) {
+            total += selectedShipping.price;
+        }
+
+        return { subtotal, discountAmount, total, transferDiscountAmount };
+    };
+
+    const totals = calculateTotals();
+
     const createOrder = async (paymentId, status, method = 'mercadopago') => {
         try {
-            // Calculate final total with shipping
-            let finalTotal = appliedDiscount
-                ? cartTotal * (1 - appliedDiscount.percentage / 100)
-                : cartTotal;
-
-            if (selectedShipping) {
-                finalTotal += selectedShipping.price;
-            }
+            const { total } = calculateTotals();
 
             const orderData = {
                 customer: {
@@ -218,7 +250,7 @@ export default function CheckoutPage() {
                     quantity: item.quantity,
                     options: item.selectedOptions
                 })),
-                total: finalTotal,
+                total: total,
                 shippingMethod: selectedShipping?.name || null,
                 shippingCost: selectedShipping?.price || 0,
                 mercadopagoPaymentId: method === 'mercadopago' ? paymentId : null,
@@ -226,7 +258,7 @@ export default function CheckoutPage() {
                 paymentDetails: {
                     paymentId,
                     email: formData.email,
-                    reservationIds: reservationIds // Store for webhook processing
+                    reservationIds: reservationIds
                 },
                 status: status,
                 userId: session?.user?.id || null,
@@ -366,7 +398,7 @@ export default function CheckoutPage() {
     const handleLoadBrick = async () => {
         setLoadingPreference(true);
         try {
-            // Calculate total with shipping
+            // Mercadopago total (without transfer discount)
             let total = appliedDiscount
                 ? cartTotal * (1 - appliedDiscount.percentage / 100)
                 : cartTotal;
@@ -408,10 +440,7 @@ export default function CheckoutPage() {
         }
     };
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        alert('Copiado al portapapeles');
-    };
+    // ... (rest of initial renders)
 
     if (cart.length === 0) {
         return (
@@ -455,7 +484,6 @@ export default function CheckoutPage() {
                 </div>
             )}
 
-            {/* Stock Error Alert */}
             {stockError && (
                 <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
                     <AlertCircle className="text-red-600" size={24} />
@@ -466,7 +494,6 @@ export default function CheckoutPage() {
                 </div>
             )}
 
-            {/* Reserving Stock Loader */}
             {reservingStock && (
                 <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3">
                     <Loader2 className="animate-spin text-blue-600" size={24} />
@@ -598,11 +625,16 @@ export default function CheckoutPage() {
                                     setSelectedMethod('transfer');
                                     setShowPaymentContent(false);
                                 }}
-                                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${selectedMethod === 'transfer'
+                                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all relative overflow-hidden ${selectedMethod === 'transfer'
                                     ? 'border-[#1a1a1a] bg-[#1a1a1a]/5 text-[#1a1a1a]'
                                     : 'border-stone-200 hover:border-stone-300 text-stone-600'
                                     }`}
                             >
+                                {transferDiscount > 0 && (
+                                    <span className="absolute top-2 right-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        -{transferDiscount}% OFF
+                                    </span>
+                                )}
                                 <Building2 size={24} />
                                 <span className="font-medium text-sm">Transferencia</span>
                             </button>
@@ -639,7 +671,7 @@ export default function CheckoutPage() {
                                 {selectedMethod === 'mercadopago' && preferenceId && (
                                     <MercadoPagoBrick
                                         preferenceId={preferenceId}
-                                        amount={cartTotal}
+                                        amount={totals.total}
                                         onPaymentSuccess={handlePaymentSuccess}
                                     />
                                 )}
@@ -677,7 +709,7 @@ export default function CheckoutPage() {
                                                 </div>
                                             </div>
                                             <div className="mt-4 text-xs text-stone-500 bg-yellow-50 p-3 rounded border border-yellow-100">
-                                                <p>⚠️ Importante: Envíanos el comprobante de transferencia por WhatsApp o Email indicando tu número de orden.</p>
+                                                <p>⚠️ Importante: El monto final a transferir es <strong>${totals.total.toLocaleString('es-AR')}</strong>. Envíanos el comprobante por WhatsApp.</p>
                                             </div>
                                         </div>
 
@@ -727,18 +759,25 @@ export default function CheckoutPage() {
                     <div className="space-y-2 pt-4 border-t border-stone-200">
                         <div className="flex justify-between text-stone-600">
                             <span>Subtotal</span>
-                            <span>${cartSubtotal?.toLocaleString('es-AR')}</span>
+                            <span>${totals.subtotal.toLocaleString('es-AR')}</span>
                         </div>
-                        {cartSavings > 0 && (
+                        {totals.discountAmount > 0 && (
                             <div className="flex justify-between text-[#8B5A2B] font-medium">
                                 <span>Descuentos</span>
-                                <span>-${cartSavings.toLocaleString('es-AR')}</span>
+                                <span>-${totals.discountAmount.toLocaleString('es-AR')}</span>
                             </div>
                         )}
                         {appliedDiscount && (
                             <div className="flex justify-between text-green-600 font-medium">
                                 <span>Descuento ({appliedDiscount.code})</span>
                                 <span>-${(cartTotal * (appliedDiscount.percentage / 100)).toLocaleString('es-AR')}</span>
+                            </div>
+                        )}
+                        {/* Transfer Discount Display */}
+                        {selectedMethod === 'transfer' && totals.transferDiscountAmount > 0 && (
+                            <div className="flex justify-between text-green-700 font-medium">
+                                <span>Descuento Transferencia ({transferDiscount}%)</span>
+                                <span>-${totals.transferDiscountAmount.toLocaleString('es-AR')}</span>
                             </div>
                         )}
                         {selectedShipping && (
@@ -749,11 +788,7 @@ export default function CheckoutPage() {
                         )}
                         <div className="flex justify-between text-xl font-bold text-[#1a1a1a] pt-2 border-t border-stone-200">
                             <span>Total</span>
-                            <span>${(() => {
-                                let total = appliedDiscount ? cartTotal * (1 - appliedDiscount.percentage / 100) : cartTotal;
-                                if (selectedShipping) total += selectedShipping.price;
-                                return total.toLocaleString('es-AR');
-                            })()}</span>
+                            <span>${totals.total.toLocaleString('es-AR')}</span>
                         </div>
 
                         {/* Discount Code Input */}

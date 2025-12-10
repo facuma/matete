@@ -10,17 +10,29 @@ export default function ShopPage() {
     const [filterCategory, setFilterCategory] = useState('Todos');
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [transferDiscount, setTransferDiscount] = useState(20);
     const { addToCart } = useCart();
 
     useEffect(() => {
-        async function fetchProducts() {
+        async function fetchData() {
             setLoading(true);
-            const res = await fetch('/api/products');
-            const data = await res.json();
-            setProducts(data);
-            setLoading(false);
+            try {
+                const [productsRes, discountRes] = await Promise.all([
+                    fetch('/api/products'),
+                    fetch('/api/promotions/transfer')
+                ]);
+                const productsData = await productsRes.json();
+                const discountData = await discountRes.json();
+
+                setProducts(productsData);
+                setTransferDiscount(discountData.discount || 20);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
         }
-        fetchProducts();
+        fetchData();
     }, []);
 
     const categories = ['Todos', 'Mates', 'Bombillas', 'Yerbas', 'Accesorios'];
@@ -58,7 +70,12 @@ export default function ShopPage() {
             ) : filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {filteredProducts.map(p => ({ ...p, image: getProductImage(p) })).map(p => (
-                        <ProductCard key={p.id} product={p} onAdd={() => addToCart(p, 1)} />
+                        <ProductCard
+                            key={p.id}
+                            product={p}
+                            transferDiscount={transferDiscount}
+                            onAdd={() => addToCart(p, 1)}
+                        />
                     ))}
                 </div>
             ) : (

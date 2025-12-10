@@ -1,23 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useCart } from '@/contexts/cart-context';
 import Button from '@/components/ui/Button';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
-import { getProductImage } from '@/lib/utils';
+import { ShieldCheck, Truck, RefreshCw, Star, ChevronLeft, ChevronRight, ShoppingCart, Landmark, Check } from 'lucide-react';
+import { event } from '@/components/FacebookPixel';
 import RelatedProducts from '@/components/RelatedProducts';
-
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 
-import { event } from '@/components/FacebookPixel';
-
-export default function ProductDetailClient({ product }) {
+export default function ProductDetailClient({ product, transferDiscount = 0 }) {
     const { addToCart } = useCart();
     const [selectedOptions, setSelectedOptions] = useState({});
 
+    const [activeImage, setActiveImage] = useState(null);
+    const [images, setImages] = useState([]);
+    const [isZoomed, setIsZoomed] = useState(false);
+
     useEffect(() => {
         if (product) {
+            const imgs = (product.images && product.images.length > 0)
+                ? product.images
+                : (product.imageUrl ? [product.imageUrl] : []);
+
+            setImages(imgs);
+            setActiveImage(imgs[0] || null);
+
             event('ViewContent', {
                 content_name: product.name,
                 content_ids: [product.id],
@@ -29,142 +36,217 @@ export default function ProductDetailClient({ product }) {
     }, [product]);
 
     if (!product) {
-        return <div className="pt-28 text-center">Producto no encontrado.</div>;
+        return <div className="pt-28 text-center text-stone-600">Producto no encontrado.</div>;
     }
 
-    // Calculate dynamic price
+    // Cálculos de precio
     const basePrice = product.promotionalPrice || product.price || 0;
-    const currentPrice = basePrice + Object.values(selectedOptions).reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
-
-    // Calculate discount percentage
-    const discountPercentage = product.promotionalPrice
-        ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
-        : 0;
+    const extrasPrice = Object.values(selectedOptions).reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
+    const currentPrice = basePrice + extrasPrice;
+    const transferPrice = (currentPrice * (1 - (transferDiscount / 100)));
 
     const breadcrumbItems = [
         { label: product.category || 'Tienda', href: `/categorias/${product.category?.toLowerCase() || 'todos'}` },
-        { label: product.name, href: null } // Current page
+        { label: product.name, href: null }
     ];
 
+    const handleNextImage = (e) => {
+        e?.stopPropagation();
+        const currentIndex = images.indexOf(activeImage);
+        const nextIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
+        setActiveImage(images[nextIndex]);
+    };
+
+    const handlePrevImage = (e) => {
+        e?.stopPropagation();
+        const currentIndex = images.indexOf(activeImage);
+        const prevIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+        setActiveImage(images[prevIndex]);
+    };
+
+    const validOptions = product.options?.filter(opt => opt.values && opt.values.length > 0) || [];
+    const hasOptions = validOptions.length > 0;
+
     return (
-        <div className="pt-28 pb-20 px-6 max-w-6xl mx-auto animate-[fadeIn_0.5s_ease-in-out]">
-            <Breadcrumbs items={breadcrumbItems} />
-            <div className="grid md:grid-cols-2 gap-12 bg-white p-6 md:p-12 rounded-2xl shadow-sm">
-                <div className="aspect-square rounded-xl overflow-hidden bg-stone-100">
-                    <img src={getProductImage(product)} alt={product.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex flex-col justify-center">
-                    <span className="text-[#8B5A2B] font-medium tracking-wide uppercase text-sm mb-2">{product.category}</span>
-                    <h1 className="text-4xl font-serif font-bold text-[#1a1a1a] mb-4">{product.name}</h1>
+        <div className="min-h-screen bg-[#F9F7F2] text-[#1a1a1a] animate-[fadeIn_0.5s_ease-in-out]">
+            <div className="pt-28 pb-20 px-4 md:px-8 max-w-[1400px] mx-auto">
+                <Breadcrumbs items={breadcrumbItems} className="mb-6 opacity-60 text-sm" />
 
-                    <div className="flex items-center gap-4 mb-6">
-                        {product.promotionalPrice && (
-                            <span className="text-2xl text-stone-400 line-through font-light">
-                                ${product.price.toLocaleString('es-AR')}
-                            </span>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+
+                    {/* COLUMNA IZQUIERDA: GALERÍA */}
+                    <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 sticky top-24 h-fit">
+
+                        {/* Thumbnails Verticales */}
+                        {images.length > 1 && (
+                            <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto scrollbar-hide py-1 flex-shrink-0 lg:w-[100px] lg:max-h-[700px]">
+                                {images.map((img, idx) => (
+                                    <button
+                                        key={idx}
+                                        onMouseEnter={() => setActiveImage(img)}
+                                        onClick={() => setActiveImage(img)}
+                                        className={`relative flex-shrink-0 w-20 h-20 lg:w-full lg:h-24 rounded-xl overflow-hidden border-2 transition-all duration-300 ${activeImage === img
+                                            ? 'border-stone-800 opacity-100 ring-1 ring-stone-800'
+                                            : 'border-transparent opacity-60 hover:opacity-100 hover:border-stone-300'
+                                            }`}
+                                    >
+                                        <img src={img} alt="" className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
                         )}
-                        <p className="text-3xl text-[#1a1a1a] font-light">
-                            ${currentPrice.toLocaleString('es-AR')}
-                        </p>
-                        {product.promotionalPrice && (
-                            <span className="px-2 py-1 border border-[#1a1a1a] rounded text-xs font-medium uppercase tracking-wider">
-                                {discountPercentage}% OFF
-                            </span>
-                        )}
-                    </div>
 
-                    <p className="text-stone-600 leading-relaxed mb-8">{product.description}</p>
-
-                    {/* Product Options */}
-                    {product.options && product.options.length > 0 && (
-                        <div className="space-y-8 mb-8">
-                            {product.options.map(option => (
-                                <div key={option.id}>
-                                    <label className="block text-sm font-medium text-stone-700 mb-3 uppercase tracking-wide">
-                                        {option.name}
-                                    </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {option.values.map(val => {
-                                            const isSelected = selectedOptions[option.name]?.id === val.id;
-                                            return (
-                                                <button
-                                                    key={val.id}
-                                                    className={`relative flex flex-col p-2 rounded-xl border-2 transition-all text-left group ${isSelected
-                                                        ? 'border-[#1a1a1a] bg-stone-50 shadow-sm'
-                                                        : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
-                                                        }`}
-                                                    onClick={() => {
-                                                        setSelectedOptions(prev => {
-                                                            // Toggle selection
-                                                            if (prev[option.name]?.id === val.id) {
-                                                                const newState = { ...prev };
-                                                                delete newState[option.name];
-                                                                return newState;
-                                                            }
-                                                            return {
-                                                                ...prev,
-                                                                [option.name]: val
-                                                            };
-                                                        });
-                                                    }}
-                                                >
-                                                    {isSelected && (
-                                                        <div className="absolute top-2 right-2 bg-[#1a1a1a] text-white rounded-full p-1 z-10">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="20 6 9 17 4 12"></polyline>
-                                                            </svg>
-                                                        </div>
-                                                    )}
-                                                    <div className="w-full aspect-square rounded-lg overflow-hidden bg-white mb-2 relative">
-                                                        {val.linkedProduct?.imageUrl ? (
-                                                            <img
-                                                                src={val.linkedProduct.imageUrl}
-                                                                alt={val.name}
-                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full bg-stone-100 flex items-center justify-center text-stone-300">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className={`text-sm font-bold leading-tight mb-1 ${isSelected ? 'text-[#1a1a1a]' : 'text-stone-700'}`}>
-                                                            {val.name}
-                                                        </span>
-                                                        {val.priceModifier > 0 && (
-                                                            <span className="text-xs font-medium text-[#8B5A2B]">
-                                                                +${val.priceModifier.toLocaleString('es-AR')}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                        <Button
-                            onClick={() => {
-                                const regularPrice = product.price + Object.values(selectedOptions).reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
-                                addToCart({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
-                            }}
-                            className="w-full py-4 text-lg"
+                        {/* Imagen Principal */}
+                        <div
+                            className="flex-1 aspect-square lg:aspect-[4/3] rounded-3xl overflow-hidden bg-white relative group cursor-zoom-in shadow-sm"
+                            onMouseEnter={() => setIsZoomed(true)}
+                            onMouseLeave={() => setIsZoomed(false)}
+                            onClick={handleNextImage}
                         >
-                            Agregar al Carrito 🧉
-                        </Button>
-                        <p className="text-xs text-stone-400 text-center flex items-center justify-center gap-2">
-                            <ShieldCheck size={14} /> Compra protegida. Devolución gratis.
-                        </p>
+                            {activeImage ? (
+                                <img
+                                    src={activeImage}
+                                    alt={product.name}
+                                    className={`w-full h-full object-cover transition-transform duration-700 ease-in-out ${isZoomed ? 'scale-125' : 'scale-100'}`}
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-stone-100">
+                                    <span className="text-4xl text-stone-300 font-serif">Mateté</span>
+                                </div>
+                            )}
+
+                            {images.length > 1 && (
+                                <>
+                                    <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 text-stone-800 p-2.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110">
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 text-stone-800 p-2.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110">
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
+
+                    {/* COLUMNA DERECHA: INFO */}
+                    <div className="lg:col-span-5 flex flex-col pt-2">
+
+                        <div className="mb-4">
+                            <span className="inline-block bg-[#E8E4D9] text-[#5C5346] px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest">
+                                {product.category || 'Mates'}
+                            </span>
+                        </div>
+
+                        <h1 className="text-4xl md:text-5xl font-serif text-[#1a1a1a] leading-[1.1] mb-3">
+                            {product.name}
+                        </h1>
+
+                        {product.rating > 0 && (
+                            <div className="flex items-center gap-1 mb-6">
+                                <div className="flex text-[#1a1a1a]">
+                                    {[...Array(5)].map((_, i) => (
+                                        <Star key={i} size={14} fill="currentColor" className={i < Math.floor(product.rating) ? "text-black" : "text-stone-300"} />
+                                    ))}
+                                </div>
+                                <span className="text-sm font-medium text-stone-500 ml-2">({product.rating} Reseñas)</span>
+                            </div>
+                        )}
+
+                        <div className="mb-8">
+                            <div className="flex items-baseline gap-3 mb-3">
+                                <span className="text-5xl font-bold tracking-tight text-[#1a1a1a]">
+                                    ${currentPrice.toLocaleString('es-AR')}
+                                </span>
+                                {product.promotionalPrice && (
+                                    <span className="text-xl text-stone-400 line-through">
+                                        ${product.price.toLocaleString('es-AR')}
+                                    </span>
+                                )}
+                            </div>
+
+                            {transferDiscount > 0 && (
+                                <div className="inline-flex items-center gap-2 bg-[#D4F7DC] border border-[#bbf7c9] px-4 py-2 rounded-full w-full md:w-auto">
+                                    <Landmark size={18} className="text-[#15803d]" />
+                                    <span className="text-[#15803d] font-semibold text-sm">
+                                        <span className="font-bold">${transferPrice.toLocaleString('es-AR')}</span> pagando por transferencia (Ahorra {transferDiscount}%)
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-stone-600 leading-relaxed mb-6 font-sans text-lg">
+                            {product.description || "Pieza única hecha a mano por artesanos argentinos. La combinación perfecta de tradición y lujo para tu ritual diario."}
+                        </p>
+
+
+
+                        {/* RENDERIZADO CONDICIONAL DE OPCIONES */}
+                        {hasOptions && (
+                            <div className="space-y-6 mb-8 pt-6 border-t border-stone-200">
+                                {validOptions.map(option => (
+                                    <div key={option.id}>
+                                        <label className="block text-sm font-bold text-[#1a1a1a] mb-2 uppercase tracking-widest">
+                                            {option.name}
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {option.values.map(val => {
+                                                const isSelected = selectedOptions[option.name]?.id === val.id;
+                                                return (
+                                                    <button
+                                                        key={val.id}
+                                                        className={`px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all ${isSelected
+                                                            ? 'border-black bg-black text-white shadow-md'
+                                                            : 'border-stone-200 text-stone-600 hover:border-stone-400 bg-white'
+                                                            }`}
+                                                        onClick={() => {
+                                                            setSelectedOptions(prev => {
+                                                                if (prev[option.name]?.id === val.id) {
+                                                                    const newState = { ...prev };
+                                                                    delete newState[option.name];
+                                                                    return newState;
+                                                                }
+                                                                return { ...prev, [option.name]: val };
+                                                            });
+                                                        }}
+                                                    >
+                                                        {val.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Botón Único de Acción */}
+                        <div className="mt-auto pt-4">
+                            <Button
+                                onClick={() => {
+                                    const regularPrice = product.price + extrasPrice;
+                                    addToCart({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
+                                }}
+                                className="w-full py-6 text-base font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full shadow-xl flex items-center justify-center gap-3 uppercase transition-transform hover:scale-[1.01]"
+                            >
+                                <ShoppingCart size={20} />
+                                Agregar al Carrito
+                            </Button>
+                        </div>
+
+                        {/* Trust Signals Footer */}
+                        <div className="flex items-center justify-between gap-2 mt-8 pt-6 border-t border-stone-200 text-xs font-semibold text-stone-500 uppercase tracking-wide">
+                            <div className="flex items-center gap-2"><ShieldCheck size={16} /> Compra protegida</div>
+                            <div className="flex items-center gap-2"><Truck size={16} /> Envíos todo el país</div>
+                            <div className="flex items-center gap-2"><RefreshCw size={16} /> Devolución gratis</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-24 border-t border-stone-200 pt-16">
+                    <h2 className="text-3xl font-serif text-center mb-12">También te podría gustar</h2>
+                    <RelatedProducts currentProductId={product.id} currentCategory={product.category} />
                 </div>
             </div>
-
-            <RelatedProducts currentProductId={product.id} currentCategory={product.category} />
         </div>
     );
 }

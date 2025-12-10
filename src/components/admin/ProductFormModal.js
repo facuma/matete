@@ -35,6 +35,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 promotionalPrice: product.promotionalPrice || '',
                 description: product.description || '',
                 imageUrl: product.imageUrl || '',
+                images: product.images || (product.imageUrl ? [product.imageUrl] : []),
                 options: product.options || [],
                 slug: product.slug || '',
                 metaTitle: product.metaTitle || '',
@@ -50,6 +51,7 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                 category: 'Mates',
                 description: '',
                 imageUrl: '',
+                images: [],
                 featured: false,
                 rating: 5,
                 rating: 5,
@@ -80,13 +82,57 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
             if (!res.ok) throw new Error('Upload failed');
 
             const { imageUrl } = await res.json();
-            setFormData(prev => ({ ...prev, imageUrl }));
+
+            // Add to gallery
+            const newImages = [...(formData.images || []), imageUrl];
+
+            setFormData(prev => ({
+                ...prev,
+                images: newImages,
+                // Set as cover if it's the first image
+                imageUrl: (!prev.imageUrl && newImages.length === 1) ? imageUrl : prev.imageUrl
+            }));
         } catch (error) {
             console.error('Error uploading image:', error);
             alert('Error al subir la imagen');
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleUrlAdd = () => {
+        if (!formData.tempUrlInput) return;
+
+        const newImages = [...(formData.images || []), formData.tempUrlInput];
+        setFormData(prev => ({
+            ...prev,
+            images: newImages,
+            // Set as cover if it's the first image
+            imageUrl: (!prev.imageUrl && newImages.length === 1) ? formData.tempUrlInput : prev.imageUrl,
+            tempUrlInput: ''
+        }));
+    };
+
+    const removeImage = (index) => {
+        const newImages = [...formData.images];
+        const removedImage = newImages[index];
+        newImages.splice(index, 1);
+
+        let newCover = formData.imageUrl;
+        // If we removed the cover image, set the new first image as cover (or empty)
+        if (formData.imageUrl === removedImage) {
+            newCover = newImages.length > 0 ? newImages[0] : '';
+        }
+
+        setFormData({
+            ...formData,
+            images: newImages,
+            imageUrl: newCover
+        });
+    };
+
+    const setCoverImage = (url) => {
+        setFormData({ ...formData, imageUrl: url });
     };
 
     const handleSubmit = (e) => {
@@ -262,10 +308,12 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                     </div>
 
                     {/* Image Upload Section */}
+                    {/* Image Gallery Section */}
                     <div className="border border-stone-200 rounded-lg p-4 bg-stone-50">
                         <label className="block text-sm font-medium text-stone-700 mb-3">
-                            Imagen del Producto
+                            Galería de Imágenes
                         </label>
+                        <p className="text-xs text-stone-500 mb-4">La imagen marcada con ★ será la portada.</p>
 
                         <div className="flex gap-4 mb-4">
                             <button
@@ -290,52 +338,84 @@ export default function ProductFormModal({ isOpen, onClose, product, onSave, all
                             </button>
                         </div>
 
-                        {inputType === 'upload' ? (
-                            <div className="flex items-center gap-4">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    accept="image/*"
-                                    className="hidden"
-                                />
-                                <Button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    variant="secondary"
-                                    disabled={uploading}
-                                >
-                                    {uploading ? 'Subiendo...' : 'Seleccionar Imagen'}
-                                </Button>
-                                <span className="text-sm text-stone-500">
-                                    {uploading ? 'Procesando...' : 'JPG, PNG, WEBP'}
-                                </span>
+                        <div className="flex gap-2 mb-4">
+                            {inputType === 'upload' ? (
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <Button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        variant="secondary"
+                                        disabled={uploading}
+                                    >
+                                        {uploading ? 'Subiendo...' : 'Seleccionar Imagen'}
+                                    </Button>
+                                    <span className="text-sm text-stone-500">
+                                        {uploading ? 'Procesando...' : 'JPG, PNG, WEBP'}
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="flex w-full gap-2">
+                                    <input
+                                        type="url"
+                                        value={formData.tempUrlInput || ''}
+                                        onChange={(e) => setFormData({ ...formData, tempUrlInput: e.target.value })}
+                                        className="flex-1 p-2 rounded-lg border border-stone-200 focus:border-stone-800 outline-none text-sm"
+                                        placeholder="https://ejemplo.com/imagen.jpg"
+                                    />
+                                    <Button type="button" onClick={handleUrlAdd} size="sm">
+                                        Agregar
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Gallery Grid */}
+                        {formData.images && formData.images.length > 0 ? (
+                            <div className="grid grid-cols-4 gap-4 mt-4">
+                                {formData.images.map((img, index) => (
+                                    <div key={index} className={`relative aspect-square border-2 rounded-lg overflow-hidden group ${formData.imageUrl === img ? 'border-blue-500' : 'border-transparent'
+                                        }`}>
+                                        <img
+                                            src={img}
+                                            alt={`Gallery ${index}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCoverImage(img)}
+                                                className={`p-1.5 rounded-full ${formData.imageUrl === img ? 'bg-blue-500 text-white' : 'bg-white text-stone-600 hover:text-blue-500'}`}
+                                                title="Hacer Portada"
+                                            >
+                                                ★
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(index)}
+                                                className="p-1.5 bg-white text-red-500 rounded-full hover:bg-red-50"
+                                                title="Eliminar"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        {formData.imageUrl === img && (
+                                            <div className="absolute top-1 left-1 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                                Portada
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <input
-                                type="url"
-                                value={formData.imageUrl}
-                                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                                className="w-full p-3 rounded-lg border border-stone-200 focus:border-stone-800 focus:ring-1 focus:ring-stone-800 outline-none"
-                                placeholder="https://ejemplo.com/imagen.jpg"
-                            />
-                        )}
-
-                        {/* Image Preview */}
-                        {formData.imageUrl && (
-                            <div className="mt-4 relative w-32 h-32 border border-stone-200 rounded-lg overflow-hidden bg-white">
-                                <img
-                                    src={formData.imageUrl}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, imageUrl: '' })}
-                                    className="absolute top-1 right-1 bg-white/80 p-1 rounded-full hover:bg-white text-red-500"
-                                >
-                                    <X size={16} />
-                                </button>
+                            <div className="text-center py-8 border-2 border-dashed border-stone-200 rounded-lg text-stone-400 text-sm">
+                                No hay imágenes en la galería
                             </div>
                         )}
                     </div>

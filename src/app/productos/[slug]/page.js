@@ -62,16 +62,26 @@ import StructuredData from '@/components/seo/StructuredData';
 
 export default async function ProductDetailPage({ params }) {
     const { slug } = await params;
-    const product = await getProduct(slug);
+    const [product, transferPromo] = await Promise.all([
+        getProduct(slug),
+        prisma.promotion.findFirst({
+            where: {
+                name: 'DESCUENTO_TRANSFERENCIA',
+                active: true
+            }
+        })
+    ]);
 
     if (!product) {
         return <div className="pt-28 text-center">Producto no encontrado.</div>;
     }
 
+    const transferDiscount = transferPromo ? transferPromo.discountPercentage : 0;
+
     return (
         <>
             <StructuredData product={product} />
-            <ProductDetailClient product={product} />
+            <ProductDetailClient product={product} transferDiscount={transferDiscount} />
         </>
     );
 }

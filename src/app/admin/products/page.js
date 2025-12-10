@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Package } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Package, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import { getProductImage } from '@/lib/utils';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import BulkUploadModal from '@/components/admin/BulkUploadModal';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
@@ -16,8 +17,10 @@ export default function AdminProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('Todos');
 
   // Modal states
+  // Modal states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
 
@@ -162,14 +165,24 @@ export default function AdminProductsPage() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-stone-800">Gestión de Productos</h1>
-        <Button
-          variant="primary"
-          className="flex items-center gap-2"
-          onClick={openCreateModal}
-        >
-          <PlusCircle size={20} />
-          Agregar Producto
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setIsUploadOpen(true)}
+          >
+            <Upload size={20} />
+            Carga Masiva
+          </Button>
+          <Button
+            variant="primary"
+            className="flex items-center gap-2"
+            onClick={openCreateModal}
+          >
+            <PlusCircle size={20} />
+            Agregar Producto
+          </Button>
+        </div>
       </div>
 
       {/* Stock Alerts Summary */}
@@ -321,6 +334,15 @@ export default function AdminProductsPage() {
         onConfirm={handleDeleteProduct}
         itemName={productToDelete?.name}
         itemType="producto"
+      />
+
+      <BulkUploadModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onUploadSuccess={() => {
+          fetchProducts();
+          toast.success('Productos importados correctamente');
+        }}
       />
     </div>
   );

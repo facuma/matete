@@ -19,6 +19,7 @@ model Product {
   category    String
   promotionalPrice Float?
   imageUrl    String?
+  images      String[] @default([]) // Gallery
   description String   @db.Text
   featured    Boolean  @default(false)
   rating      Float    @default(5.0)
@@ -37,6 +38,9 @@ model Product {
   options     ProductOption[]
   linkedInValues ProductOptionValue[] @relation("LinkedProduct")
   reservations StockReservation[]
+  
+  promotionId  String?
+  promotion    Promotion? @relation(fields: [promotionId], references: [id])
 
   @@map("products")
 }
@@ -147,13 +151,20 @@ model DeviceToken {
 
 model HomePageContent {
   id             Int      @id @default(1)
-  heroTitle      String   @default("MATETÉ")
-  heroSubtitle   String   @default("El ritual de cada día")
-  heroButtonText String   @default("Ver Colección")
-  heroImage      String?  // URL to image
   
-  aboutTitle     String   @default("Sobre Nosotros")
-  aboutText      String   @default("Nacimos en Resistencia, Chaco, con la misión de revalorizar el ritual del mate.")
+  // New JSON Structures
+  heroSlider     Json?    @default("[]") // Array of { id, title, subtitle, image, ctaText, link }
+  promoGrid      Json?    @default("[]") // Array of { title, subtitle, icon, color }
+  flashDeal      Json?    @default("{}") // Object { enabled, endTime, productIds }
+  campaign       Json?    @default("{}") // Object { title, bannerImage, collectionTag, link }
+
+  // Legacy fields (optional, kept for safety or if needed by other components temporarily)
+  heroTitle      String?   @default("MATETÉ")
+  heroSubtitle   String?   @default("El ritual de cada día")
+  heroButtonText String?   @default("Ver Colección")
+  heroImage      String?
+  aboutTitle     String?   @default("Sobre Nosotros")
+  aboutText      String?   @default("Nacimos en Resistencia, Chaco, con la misión de revalorizar el ritual del mate.")
   aboutImage1    String?
   aboutImage2    String?
 
@@ -209,9 +220,34 @@ model SiteSettings {
   id              Int     @id @default(1)
   facebookPixelId String?
   
+  // Mercado Pago Credentials (Single Tenant)
+  mpAccessToken   String?
+  mpRefreshToken  String?
+  mpPublicKey     String?
+  mpUserId        BigInt?
+  mpExpiresAt     DateTime?
+
   updatedAt       DateTime @updatedAt
+  
+  transferDiscountPercentage Float @default(20.0)
 
   @@map("site_settings")
+}
+
+model Promotion {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  discountPercentage Float
+  startDate   DateTime
+  endDate     DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+
+  @@map("promotions")
 }
 
 model StockReservation {
