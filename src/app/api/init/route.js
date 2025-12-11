@@ -37,6 +37,7 @@ export async function GET() {
                     imageUrl: true,
                     rating: true,
                     stock: true,
+                    categoryId: true,
                     category: {
                         select: {
                             name: true,
