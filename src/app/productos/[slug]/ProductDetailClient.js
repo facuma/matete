@@ -48,7 +48,7 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                     content_name: product.name,
                     content_ids: [product.id],
                     content_type: 'product',
-                    value: product.promotionalPrice || product.price,
+                    value: basePriceValue,
                     currency: 'ARS'
                 });
             }
@@ -77,9 +77,23 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
     }
 
     // Cálculos de precio
-    const basePrice = product.promotionalPrice || product.price || 0;
+    // Helper to get raw numeric value whether it is Money object or number
+    const getPriceValue = (p) => (p && typeof p === 'object' && 'amount' in p) ? p.amount : (p || 0);
+
+    const basePriceValue = getPriceValue(product.promotionalPrice || product.price);
+    const regularPriceValue = getPriceValue(product.price);
+
     const extrasPrice = Object.values(selectedOptions).reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
-    const currentPrice = basePrice + extrasPrice;
+    const currentPrice = basePriceValue + extrasPrice;
+
+    // Formatting helper
+    const formatPrice = (value) => new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(value);
+
     const transferPrice = (currentPrice * (1 - (transferDiscount / 100)));
 
     const categoryName = product.category?.name || (typeof product.category === 'string' ? product.category : 'Tienda');
@@ -195,11 +209,11 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                         <div className="mb-8">
                             <div className="flex items-baseline gap-3 mb-3">
                                 <span className="text-5xl font-bold tracking-tight text-[#1a1a1a]">
-                                    ${currentPrice.toLocaleString('es-AR')}
+                                    {formatPrice(currentPrice)}
                                 </span>
                                 {product.promotionalPrice && (
                                     <span className="text-xl text-stone-400 line-through">
-                                        ${product.price.toLocaleString('es-AR')}
+                                        {formatPrice(regularPriceValue)}
                                     </span>
                                 )}
                             </div>
@@ -208,7 +222,7 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                                 <div className="inline-flex items-center gap-2 bg-[#D4F7DC] border border-[#bbf7c9] px-4 py-2 rounded-full w-full md:w-auto">
                                     <Landmark size={18} className="text-[#15803d]" />
                                     <span className="text-[#15803d] font-semibold text-sm">
-                                        <span className="font-bold">${transferPrice.toLocaleString('es-AR')}</span> pagando por transferencia (Ahorra {transferDiscount}%)
+                                        <span className="font-bold">{formatPrice(transferPrice)}</span> pagando por transferencia (Ahorra {transferDiscount}%)
                                     </span>
                                 </div>
                             )}
@@ -263,8 +277,8 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                         <div className="mt-auto pt-4">
                             <Button
                                 onClick={() => {
-                                    const regularPrice = product.price + extrasPrice;
-                                    addToCart({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
+                                    const regularPrice = regularPriceValue + extrasPrice;
+                                    addItem({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
                                 }}
                                 className="w-full py-6 text-base font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full shadow-xl flex items-center justify-center gap-3 uppercase transition-transform hover:scale-[1.01]"
                             >
@@ -293,12 +307,12 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Total</span>
-                        <span className="text-xl font-bold text-[#1a1a1a] leading-none">${currentPrice.toLocaleString('es-AR')}</span>
+                        <span className="text-xl font-bold text-[#1a1a1a] leading-none">{formatPrice(currentPrice)}</span>
                     </div>
                     <Button
                         onClick={() => {
-                            const regularPrice = product.price + extrasPrice;
-                            addToCart({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
+                            const regularPrice = regularPriceValue + extrasPrice;
+                            addItem({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
                         }}
                         className="flex-1 py-3.5 text-sm font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full flex items-center justify-center gap-2 uppercase shadow-lg active:scale-95 transition-all"
                     >
