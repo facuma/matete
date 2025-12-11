@@ -28,6 +28,7 @@ export interface ProductProps {
     rating: number;
     categoryId?: number;
     category?: { name: string; slug?: string } | string;
+    options?: { id: number; name: string; values: { id: number; name: string; priceModifier: number }[] }[];
 }
 
 export class Product extends Entity<number> {
@@ -42,6 +43,7 @@ export class Product extends Entity<number> {
     readonly rating: number;
     readonly categoryId?: number;
     readonly category?: { name: string; slug?: string } | string;
+    readonly options?: { id: number; name: string; values: { id: number; name: string; priceModifier: number }[] }[];
 
     constructor(props: ProductProps) {
         super(props.id);
@@ -56,6 +58,7 @@ export class Product extends Entity<number> {
         this.rating = props.rating;
         this.categoryId = props.categoryId;
         this.category = props.category;
+        this.options = props.options;
     }
 
     get effectivePrice(): Money {

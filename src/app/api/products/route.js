@@ -52,6 +52,22 @@ export async function GET(request) {
               slug: true,
               parent: true
             }
+          },
+          options: {
+            include: {
+              values: {
+                include: {
+                  linkedProduct: {
+                    select: {
+                      id: true,
+                      name: true,
+                      imageUrl: true,
+                      images: true
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }),

@@ -234,23 +234,25 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
 
 
 
-                        {/* RENDERIZADO CONDICIONAL DE OPCIONES */}
+                        {/* RENDERIZADO VISUAL DE OPCIONES */}
                         {hasOptions && (
                             <div className="space-y-6 mb-8 pt-6 border-t border-stone-200">
                                 {validOptions.map(option => (
                                     <div key={option.id}>
-                                        <label className="block text-sm font-bold text-[#1a1a1a] mb-2 uppercase tracking-widest">
+                                        <label className="block text-sm font-bold text-[#1a1a1a] mb-3 uppercase tracking-widest">
                                             {option.name}
                                         </label>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-3">
                                             {option.values.map(val => {
                                                 const isSelected = selectedOptions[option.name]?.id === val.id;
+                                                const linkedImg = val.linkedProduct?.imageUrl || (val.linkedProduct?.images && val.linkedProduct.images[0]);
+
                                                 return (
                                                     <button
                                                         key={val.id}
-                                                        className={`px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all ${isSelected
-                                                            ? 'border-black bg-black text-white shadow-md'
-                                                            : 'border-stone-200 text-stone-600 hover:border-stone-400 bg-white'
+                                                        className={`group relative flex flex-col items-center p-2 rounded-xl border-2 transition-all duration-200 w-28 ${isSelected
+                                                            ? 'border-black bg-stone-50'
+                                                            : 'border-stone-100 hover:border-stone-300 bg-white'
                                                             }`}
                                                         onClick={() => {
                                                             setSelectedOptions(prev => {
@@ -263,7 +265,33 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                                                             });
                                                         }}
                                                     >
-                                                        {val.name}
+                                                        {/* Visual Checkmark */}
+                                                        {isSelected && (
+                                                            <div className="absolute top-2 right-2 bg-black text-white rounded-full p-0.5 z-10">
+                                                                <Check size={12} strokeWidth={3} />
+                                                            </div>
+                                                        )}
+
+                                                        {/* Image or Placeholder */}
+                                                        <div className="w-full aspect-square rounded-lg overflow-hidden bg-stone-100 mb-2 relative">
+                                                            {linkedImg ? (
+                                                                <img src={linkedImg} alt={val.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-stone-300">
+                                                                    <div className="w-8 h-8 rounded-full border-2 border-dashed border-stone-300"></div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Name and Price */}
+                                                        <div className="text-center w-full">
+                                                            <span className="block text-xs font-bold text-[#1a1a1a] leading-tight mb-0.5 line-clamp-2 min-h-[2.5em]">{val.name}</span>
+                                                            {val.priceModifier > 0 && (
+                                                                <span className="block text-[10px] font-medium text-stone-500">
+                                                                    +{formatPrice(val.priceModifier)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </button>
                                                 );
                                             })}

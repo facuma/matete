@@ -21,7 +21,8 @@ export class ProductMapper {
             featured: raw.featured || false,
             rating: raw.rating || 0,
             categoryId: raw.categoryId,
-            category: raw.category
+            category: raw.category,
+            options: raw.options || []
         });
     }
 }
