@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
 import sharp from "sharp";
-
-// Configuration
-const EXTERNAL_API_URL = process.env.EXTERNAL_IMAGE_API_URL || "https://images.cubells.com.ar";
-const EXTERNAL_AUTH_TOKEN = process.env.EXTERNAL_IMAGE_AUTH_TOKEN;
+import { uploadObject, listObjects, deleteObject } from "@/lib/storage/r2";
 
 // Ensure this runs in Node.js runtime for Sharp
 export const runtime = 'nodejs';
 
 /**
  * POST: Upload Image
- * Optimizes image with Sharp and uploads to External API.
+ * Optimizes image with Sharp and uploads to Cloudflare R2.
  */
 export async function POST(request) {
     try {
@@ -50,44 +46,27 @@ export async function POST(request) {
         // 2. Optimize with Sharp
         // Resize to width 1200 (maintain aspect ratio), WebP, Quality 80
         const optimizedBuffer = await sharp(buffer)
+            .rotate() // Auto-orient based on EXIF
             .resize(1200, null, { withoutEnlargement: true })
             .webp({ quality: 80 })
             .toBuffer();
 
-        // 3. Prepare FormData for External API
-        const externalFormData = new FormData();
-        // The external API expects 'file'. We send the optimized buffer as a file.
-        // We need to pass a Blob-like object. In Node, we can append a Blob or try Buffer with options.
-        // Standard FormData in Node context (from 'undici' or native in Node 18+) might behave differently.
-        // Let's create a Blob from the buffer.
-        const optimizedBlob = new Blob([optimizedBuffer], { type: 'image/webp' });
-
+        // 3. Upload to R2
         // Change extension to .webp
-        const requestFilename = originalFilename.replace(/\.[^/.]+$/, "") + ".webp";
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filenameBase = originalFilename.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-]/g, '-');
+        const r2Key = `uploads/${filenameBase}-${uniqueSuffix}.webp`;
 
-        externalFormData.append("file", optimizedBlob, requestFilename);
-
-        // 4. Send to External API
-        const uploadResponse = await fetch(`${EXTERNAL_API_URL}/upload`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${EXTERNAL_AUTH_TOKEN}`
-            },
-            body: externalFormData,
+        const { url: publicUrl } = await uploadObject({
+            key: r2Key,
+            body: optimizedBuffer,
+            contentType: 'image/webp'
         });
-
-        if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            console.error("External API Error:", errorText);
-            throw new Error(`External API responded with ${uploadResponse.status}`);
-        }
-
-        const data = await uploadResponse.json();
 
         // Return expected format
         return NextResponse.json({
-            imageUrl: data.url,
-            resizedUrl: data.url // Legacy support if needed
+            imageUrl: publicUrl,
+            resizedUrl: publicUrl
         }, { status: 200 });
 
     } catch (error) {
@@ -98,72 +77,25 @@ export async function POST(request) {
 
 /**
  * GET: List Images
- * Combines images from Supabase Storage (Legacy) and External API (New).
+ * Lists images from Cloudflare R2.
  */
 export async function GET() {
     try {
-        // 1. Fetch from Supabase (Legacy)
-        const supabasePromise = (async () => {
-            if (!supabaseAdmin) return [];
-            const { data, error } = await supabaseAdmin.storage
-                .from('products')
-                .list('uploads', {
-                    limit: 100,
-                    sortBy: { column: 'created_at', order: 'desc' }
-                });
+        const files = await listObjects(100);
 
-            if (error) {
-                console.error("Supabase list error:", error);
-                return [];
-            }
+        // Map to format expected by frontend
+        const mappedFiles = files.map(file => ({
+            name: file.key.replace('uploads/', ''), // Display name (optional clean up)
+            url: file.url,
+            created_at: file.lastModified,
+            size: file.size,
+            source: 'r2'
+        }));
 
-            return data
-                .filter(file => file.name !== '.emptyFolderPlaceholder')
-                .map(file => {
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('products')
-                        .getPublicUrl(`uploads/${file.name}`);
-                    return {
-                        name: file.name,
-                        url: publicUrl,
-                        created_at: file.created_at,
-                        size: file.metadata?.size || 0,
-                        source: 'supabase'
-                    };
-                });
-        })();
+        // Sort by date desc
+        mappedFiles.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        // 2. Fetch from External API (New)
-        const externalPromise = (async () => {
-            try {
-                const res = await fetch(`${EXTERNAL_API_URL}/files`, {
-                    headers: {
-                        "Authorization": `Bearer ${EXTERNAL_AUTH_TOKEN}`
-                    }
-                });
-                if (!res.ok) throw new Error("External API list failed");
-                return await res.json();
-            } catch (err) {
-                console.error("External API list error:", err);
-                return [];
-            }
-        })();
-
-        // Wait for both
-        const [supabaseFiles, externalFiles] = await Promise.all([supabasePromise, externalPromise]);
-
-        // Validate structure of external files
-        const validExternalFiles = Array.isArray(externalFiles) ? externalFiles.map(f => ({
-            ...f,
-            source: 'external'
-        })) : [];
-
-        // Combine and Sort
-        const allFiles = [...validExternalFiles, ...supabaseFiles].sort((a, b) => {
-            return new Date(b.created_at) - new Date(a.created_at);
-        });
-
-        return NextResponse.json(allFiles);
+        return NextResponse.json(mappedFiles);
 
     } catch (error) {
         console.error("Error listing files:", error);
@@ -173,7 +105,7 @@ export async function GET() {
 
 /**
  * DELETE: Remove Image
- * Tries to delete from External API first, then falls back to Supabase.
+ * Deletes from Cloudflare R2.
  */
 export async function DELETE(request) {
     try {
@@ -183,54 +115,26 @@ export async function DELETE(request) {
             return NextResponse.json({ error: "Filename required" }, { status: 400 });
         }
 
-        // Try deleting from External API
-        let deletedFromExternal = false;
-        try {
-            const res = await fetch(`${EXTERNAL_API_URL}/uploads/${filename}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${EXTERNAL_AUTH_TOKEN}`
-                }
-            });
-            if (res.ok) {
-                deletedFromExternal = true;
-            } else if (res.status === 404) {
-                deletedFromExternal = false;
-            } else {
-                console.error("External delete error stauts:", res.status);
-                // If 500 or other error, logic says "Intentar borrar de Supabase Storage si falla"
-                // So we assume not deleted and try supabase? 
-                // Or "Si devuelve 404 (o falla)". "o falla" implies any failure.
-                // So we continue to Supabase.
-            }
-        } catch (err) {
-            console.error("External delete fetch error:", err);
-        }
+        // The filename coming from frontend might be just the name or full path.
+        // Our list returns "uploads/..." masked as key, or name.
+        // If we look at GET above, we sent `name: file.key.replace('uploads/', '')`?
+        // Wait, if we send `name` as just the filename, the frontend might send that back.
+        // R2 `uploadObject` used `uploads/...` as key.
+        // Let's assume the frontend sends what we gave it in `name`.
+        // If `name` was "foo.webp", real key is "uploads/foo.webp".
+        // But wait, `listObjects` in `r2.ts` returns `key` as the full key. 
+        // In GET above: `name: file.key.replace('uploads/', '')`.
+        // So frontend receives simplified name.
+        // We should reconstruct the key or handle it.
+        // Ideally, the frontend should send the full key or we assume prefix.
+        // Legacy code used `uploads/${filename}` for deletion.
+        // Let's stick to that pattern: prepend `uploads/` if missing.
 
-        if (deletedFromExternal) {
-            return NextResponse.json({ success: true, source: 'external' });
-        }
+        const key = filename.startsWith('uploads/') ? filename : `uploads/${filename}`;
 
-        // If not deleted from external (e.g. 404), try Supabase
-        if (!supabaseAdmin) {
-            // If supabase not configured, but we failed external, we might just fail.
-            // But let's verify if we need legacy cleanup.
-            console.error("Supabase Admin not configured for fallback delete");
-            // We can't do much if Supabase invalid. 
-            // Return error or success? If external failed, we probably want to try Supabase.
-            return NextResponse.json({ error: "Configuration error for fallback delete" }, { status: 500 });
-        }
+        await deleteObject(key);
 
-        const { error } = await supabaseAdmin.storage
-            .from('products')
-            .remove([`uploads/${filename}`]);
-
-        if (error) {
-            console.error("Supabase delete error:", error);
-            return NextResponse.json({ error: "Failed to delete file from both sources" }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, source: 'supabase' });
+        return NextResponse.json({ success: true, source: 'r2' });
 
     } catch (error) {
         console.error("Error deleting file:", error);

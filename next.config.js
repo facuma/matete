@@ -24,6 +24,10 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'i.pinimg.com',
             },
+            {
+                protocol: 'https',
+                hostname: '*.r2.cloudflarestorage.com',
+            },
         ],
     },
     // Deshabilitar minificación agresiva
