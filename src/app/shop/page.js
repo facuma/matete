@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import ProductCard from '@/components/ProductCard';
+import { ProductCard } from '@/components/organisms/ProductCard';
 import { useCart } from '@/contexts/cart-context';
 import { getProductImage } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function ShopPage() {
     const { products: allProducts, loading: productsLoading } = useProducts();
     const [selectedCategory, setSelectedCategory] = useState('todos');
     const [transferDiscount, setTransferDiscount] = useState(20);
-    const { addToCart } = useCart();
+    const { addItem } = useCart();
 
     // Dropdown state
     const [openDropdown, setOpenDropdown] = useState(null);
@@ -175,7 +175,7 @@ export default function ShopPage() {
                             key={p.id}
                             product={p}
                             transferDiscount={transferDiscount}
-                            onAdd={() => addToCart(p, 1)}
+                            onAdd={() => addItem(p, 1)}
                         />
                     ))}
                 </div>

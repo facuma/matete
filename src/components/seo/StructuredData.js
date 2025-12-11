@@ -75,8 +75,8 @@ export default function StructuredData({ product }) {
             {
                 '@type': 'ListItem',
                 position: 2,
-                name: product.category || 'Tienda',
-                item: `${baseUrl}/categorias/${product.category?.toLowerCase() || 'todos'}`,
+                name: (product.category?.name || product.category || 'Tienda'),
+                item: `${baseUrl}/categorias/${(product.category?.slug || product.category?.name || product.category || 'todos').toLowerCase()}`,
             },
             {
                 '@type': 'ListItem',

@@ -1,42 +1,23 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { ServiceFactory } from '@/infrastructure/factories/ServiceFactory';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const categorySlug = searchParams.get('category');
 
-    let where = {};
+    const productRepository = ServiceFactory.getProductRepository();
 
-    if (categorySlug && categorySlug !== 'todos') {
-      // Find category and its children
-      const category = await prisma.category.findUnique({
-        where: { slug: categorySlug },
-        include: { children: true }
-      });
-
-      if (category) {
-        const categoryIds = [category.id, ...category.children.map(c => c.id)];
-        where = {
-          categoryId: { in: categoryIds }
-        };
-      } else {
-        // Fallback for legacy string categories if needed, or simply return empty if category not found in DB
-        // For now, let's assume if not found in DB, maybe it's a legacy string match?
-        // where = { category: categorySlug }; // Uncomment if you want legacy fallback
-      }
-    }
-
-    const products = await prisma.product.findMany({
-      where,
-      orderBy: { id: 'asc' },
-      include: {
-        category: {
-          include: { parent: true }
-        },
-        options: { include: { values: true } }
-      }
+    // Use the repository to fetch domain entities
+    const products = await productRepository.findAll({
+      categorySlug: categorySlug || undefined
     });
+
+    // Map Domain Objects back to DTOs/JSON if necessary.
+    // Since our Domain Product closely matches what frontend expects (thanks to Mapper), 
+    // we can return it. Ideally we should use a DTO Mapper here too.
+    // For now, returning the domain entities is a safe improvement over raw DB rows.
+
     return NextResponse.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);

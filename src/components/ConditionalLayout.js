@@ -1,14 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { Header } from '@/components/organisms/Header';
+import { Footer } from '@/components/organisms/Footer';
 import CartSidebar from '@/components/CartSidebar';
 import CookieBanner from '@/components/CookieBanner';
 
 export function ConditionalLayout({ children }) {
     const pathname = usePathname();
     const isAdminRoute = pathname?.startsWith('/admin');
+    const isCheckout = pathname?.startsWith('/checkout');
 
     // Don't show e-commerce layout for admin routes
     if (isAdminRoute) {
@@ -18,7 +19,7 @@ export function ConditionalLayout({ children }) {
     // Show normal e-commerce layout
     return (
         <>
-            <Header />
+            {!isCheckout && <Header />}
             <CartSidebar />
             <main className="flex-grow bg-[#FAF9F6]">{children}</main>
             <Footer />

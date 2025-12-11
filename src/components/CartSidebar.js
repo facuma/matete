@@ -9,7 +9,7 @@ import { getProductImage } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 
 export default function CartSidebar() {
-    const { isCartOpen, setIsCartOpen, cart, cartCount, cartTotal, cartSubtotal, cartSavings, addToCart, removeFromCart } = useCart();
+    const { cart, isCartOpen, setIsCartOpen, removeItem, cartTotal, cartCount, cartSubtotal, cartSavings, addItem, updateQuantity } = useCart();
     const { products } = useProducts(); // Use cached products for stock check
 
     // Get available stock for a product from the unified store
@@ -21,13 +21,13 @@ export default function CartSidebar() {
 
     // Check if product is at max quantity
     const isAtMaxStock = (item) => {
-        const availableStock = getAvailableStock(item.id);
+        const availableStock = getAvailableStock(item.product.id);
         return item.quantity >= availableStock;
     };
 
     // Check if product has low stock (less than 5 units available)
     const hasLowStock = (item) => {
-        const availableStock = getAvailableStock(item.id);
+        const availableStock = getAvailableStock(item.product.id);
         return availableStock > 0 && availableStock <= 5;
     };
 
@@ -51,17 +51,18 @@ export default function CartSidebar() {
                         </div>
                     ) : (
                         cart.map(item => {
+                            const product = item.product;
                             const atMaxStock = isAtMaxStock(item);
                             const lowStock = hasLowStock(item);
 
                             return (
-                                <div key={item.cartId} className="flex gap-4">
+                                <div key={item.id} className="flex gap-4">
                                     <div className="w-20 h-20 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0">
-                                        <img src={getProductImage(item)} alt={item.name} className="w-full h-full object-cover" />
+                                        <img src={getProductImage(product)} alt={product.name} className="w-full h-full object-cover" />
                                     </div>
                                     <div className="flex-grow">
                                         <div className="flex items-start gap-2">
-                                            <h3 className="font-bold text-[#1a1a1a] text-sm">{item.name}</h3>
+                                            <h3 className="font-bold text-[#1a1a1a] text-sm">{product.name}</h3>
                                             {lowStock && (
                                                 <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">
                                                     Últimas unidades
@@ -71,25 +72,25 @@ export default function CartSidebar() {
                                         {item.selectedOptions && Object.entries(item.selectedOptions).map(([key, val]) => (
                                             <p key={key} className="text-xs text-stone-500">+ {val.name}</p>
                                         ))}
-                                        <p className="text-[#8B5A2B] text-sm font-medium mb-2">${item.price.toLocaleString('es-AR')}</p>
+                                        <p className="text-[#8B5A2B] text-sm font-medium mb-2">{product.effectivePrice.format()}</p>
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center border border-stone-300 rounded-md">
                                                 <button
                                                     className="px-2 py-1 hover:bg-stone-100"
-                                                    onClick={() => item.quantity > 1 ? addToCart(item, -1, item.selectedOptions) : removeFromCart(item.cartId)}
+                                                    onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)}
                                                 >
                                                     -
                                                 </button>
                                                 <span className="px-2 text-sm">{item.quantity}</span>
                                                 <button
                                                     className={`px-2 py-1 ${atMaxStock ? 'text-stone-300 cursor-not-allowed' : 'hover:bg-stone-100 text-stone-700'}`}
-                                                    onClick={() => !atMaxStock && addToCart(item, 1, item.selectedOptions)}
+                                                    onClick={() => !atMaxStock && updateQuantity(item.id, item.quantity + 1)}
                                                     disabled={atMaxStock}
                                                 >
                                                     +
                                                 </button>
                                             </div>
-                                            <button onClick={() => removeFromCart(item.cartId)} className="text-stone-400 hover:text-red-500">
+                                            <button onClick={() => removeItem(item.id)} className="text-stone-400 hover:text-red-500">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>

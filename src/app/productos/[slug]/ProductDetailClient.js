@@ -8,13 +8,13 @@ import { ShieldCheck, Truck, RefreshCw, Star, ChevronLeft, ChevronRight, Shoppin
 import { event } from '@/components/FacebookPixel';
 import RelatedProducts from '@/components/RelatedProducts';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
-import ProductCard from '@/components/ProductCard';
+import ProductCard from '@/components/organisms/ProductCard';
 
 
 import ProductSkeleton from '@/components/ProductSkeleton'; // You might need a more specific skeleton
 
 export default function ProductDetailClient({ initialProduct, slug, transferDiscount = 0 }) {
-    const { addToCart } = useCart();
+    const { addItem } = useCart();
     const { products, loading } = useProducts();
     const [selectedOptions, setSelectedOptions] = useState({});
 
@@ -82,8 +82,11 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
     const currentPrice = basePrice + extrasPrice;
     const transferPrice = (currentPrice * (1 - (transferDiscount / 100)));
 
+    const categoryName = product.category?.name || (typeof product.category === 'string' ? product.category : 'Tienda');
+    const categorySlug = product.category?.slug || categoryName?.toLowerCase() || 'todos';
+
     const breadcrumbItems = [
-        { label: product.category || 'Tienda', href: `/categorias/${product.category?.toLowerCase() || 'todos'}` },
+        { label: categoryName, href: `/categorias/${categorySlug}` },
         { label: product.name, href: null }
     ];
 
@@ -170,7 +173,7 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
 
                         <div className="mb-4">
                             <span className="inline-block bg-[#E8E4D9] text-[#5C5346] px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest">
-                                {product.category || 'Mates'}
+                                {categoryName}
                             </span>
                         </div>
 
@@ -281,7 +284,7 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
 
                 <div className="mt-24 border-t border-stone-200 pt-16">
                     <h2 className="text-3xl font-serif text-center mb-12">También te podría gustar</h2>
-                    <RelatedProducts currentProductId={product.id} currentCategory={product.category} />
+                    <RelatedProducts currentProductId={product.id} currentCategory={categoryName} />
                 </div>
             </div>
 

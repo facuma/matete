@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ProductCard from '@/components/ProductCard';
+import { ProductCard } from '@/components/organisms/ProductCard';
 import { getProductImage } from '@/lib/utils';
 import { useProducts } from '@/contexts/product-context';
 import ProductSkeleton from '@/components/ProductSkeleton';

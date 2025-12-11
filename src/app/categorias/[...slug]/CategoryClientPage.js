@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import ProductCard from '@/components/ProductCard';
+import { ProductCard } from '@/components/organisms/ProductCard';
 import ProductSkeleton from '@/components/ProductSkeleton';
 import { useCategories } from '@/contexts/category-context';
 import { useCart } from '@/contexts/cart-context';
@@ -14,7 +14,7 @@ export default function CategoryClientPage({ slugArray }) {
     const slug = slugArray[slugArray.length - 1];
     const { categories } = useCategories();
     const { products: allProducts, loading: productsLoading } = useProducts();
-    const { addToCart } = useCart();
+    const { addItem } = useCart();
 
     const [transferDiscount, setTransferDiscount] = useState(20);
 
@@ -108,7 +108,7 @@ export default function CategoryClientPage({ slugArray }) {
                             key={product.id}
                             product={product}
                             transferDiscount={transferDiscount}
-                            onAdd={() => addToCart(product)}
+                            onAdd={() => addItem(product)}
                         />
                     ))}
                 </div>

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global;
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 export const prisma = globalForPrisma.prisma || new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
@@ -10,6 +10,7 @@ export const prisma = globalForPrisma.prisma || new PrismaClient({
         },
     },
     // Aumentar timeouts para evitar errores en cold starts
+    // @ts-ignore
     __internal: {
         engine: {
             connectionTimeout: 20000,

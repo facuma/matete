@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { Toaster } from 'sonner';
 import { StoreProvider } from '@/contexts/store-context';
 
+import { ServiceProvider } from '@/contexts/services/service-context';
 export const metadata = {
   title: 'MATETÉ - El ritual de cada día',
   description: 'Mates artesanales, bombillas premium y los mejores accesorios para que tu momento sea único.',
@@ -25,15 +26,18 @@ export default async function RootLayout({ children }) {
           <FacebookPixel pixelId={pixelId} />
         </Suspense>
         <SessionProvider>
-          <CartProvider>
-            <StoreProvider>
-              <ConditionalLayout>
-                {children}
-              </ConditionalLayout>
-              <WhatsAppButton />
-              <Toaster position="top-right" richColors />
-            </StoreProvider>
-          </CartProvider>
+          <ServiceProvider>
+            <CartProvider>
+              <StoreProvider>
+                <ConditionalLayout>
+
+                  {children}
+                </ConditionalLayout>
+                <WhatsAppButton />
+                <Toaster position="top-right" richColors />
+              </StoreProvider>
+            </CartProvider>
+          </ServiceProvider>
         </SessionProvider>
       </body>
     </html>

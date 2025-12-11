@@ -2,7 +2,7 @@
 import { useProducts } from '@/contexts/product-context';
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import ProductCard from './ProductCard';
+import { ProductCard } from './organisms/ProductCard';
 
 export default function RelatedProducts({ currentProductId, currentCategory }) {
     const { products: allProducts, loading } = useProducts();

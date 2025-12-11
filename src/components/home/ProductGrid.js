@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ProductCard from '@/components/ProductCard';
+import { ProductCard } from '@/components/organisms/ProductCard';
 
 export default function ProductGrid({ data, products = [], transferDiscount = 0 }) {
     // data can include: title, subtitle, count, filter (featured, latest, category)

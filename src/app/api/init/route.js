@@ -26,8 +26,24 @@ export async function GET() {
             // 2. Products
             prisma.product.findMany({
                 orderBy: { createdAt: 'desc' },
-                // Include necessary relations for display
-                // If this is too heavy, we can select specific fields
+                take: 50, // Limit to avoid massive payload in one go
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    price: true,
+                    promotionalPrice: true,
+                    images: true,
+                    imageUrl: true,
+                    rating: true,
+                    stock: true,
+                    category: {
+                        select: {
+                            name: true,
+                            slug: true
+                        }
+                    }
+                }
             }),
 
             // 3. Home Content

@@ -3,8 +3,10 @@ import ProductDetailClient from './ProductDetailClient';
 import { generateProductMetadata } from '@/lib/seo';
 import StructuredData from '@/components/seo/StructuredData';
 
-// 1. Minimal Fetch for SEO (Metadata)
-async function getProductMetadata(slug) {
+import { cache } from 'react';
+
+// 1. Minimal Fetch for SEO (Metadata) - Cached to run once per request
+const getProductMetadata = cache(async (slug) => {
     try {
         const product = await prisma.product.findUnique({
             where: { slug: slug },
@@ -14,7 +16,14 @@ async function getProductMetadata(slug) {
                 description: true,
                 images: true,
                 price: true,
-                slug: true
+                slug: true,
+                metaTitle: true,
+                metaDescription: true,
+                imageUrl: true,
+                rating: true,
+                category: true, // Needed for StructuredData breadcrumbs
+                brand: true,
+                material: true
             }
         });
         return product;
@@ -22,7 +31,7 @@ async function getProductMetadata(slug) {
         console.error('Error fetching product metadata:', error);
         return null;
     }
-}
+});
 
 export async function generateStaticParams() {
     try {
@@ -58,14 +67,14 @@ export async function generateMetadata({ params }) {
 export default async function ProductDetailPage({ params }) {
     const { slug } = await params;
 
-    // We fetch metadata for SEO, but we don't block the UI with heavy relational queries
-    const productMeta = await getProductMetadata(slug);
-
-    // Fetch transfer discount settings (lightweight)
-    const transferPromo = await prisma.promotion.findFirst({
-        where: { name: 'DESCUENTO_TRANSFERENCIA', active: true },
-        select: { discountPercentage: true }
-    });
+    // Run independent fetches in parallel
+    const [productMeta, transferPromo] = await Promise.all([
+        getProductMetadata(slug),
+        prisma.promotion.findFirst({
+            where: { name: 'DESCUENTO_TRANSFERENCIA', active: true },
+            select: { discountPercentage: true }
+        })
+    ]);
 
     if (!productMeta) {
         return <div className="pt-28 text-center">Producto no encontrado.</div>;

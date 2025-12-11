@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
-import ProductCard from '@/components/ProductCard';
+import { ProductCard } from '@/components/organisms/ProductCard';
 
 export default function FlashSale({ data, products = [], transferDiscount = 0 }) {
     if (!data?.enabled || !data.endTime) return null;
