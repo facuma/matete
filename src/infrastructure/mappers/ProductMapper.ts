@@ -7,8 +7,14 @@ export class ProductMapper {
             id: raw.id,
             name: raw.name,
             slug: raw.slug || '',
-            price: new Money(raw.price),
-            promotionalPrice: raw.promotionalPrice ? new Money(raw.promotionalPrice) : undefined,
+            price: (raw.price && typeof raw.price === 'object' && 'amount' in raw.price)
+                ? new Money(raw.price.amount, raw.price.currency)
+                : new Money(raw.price),
+            promotionalPrice: raw.promotionalPrice
+                ? ((typeof raw.promotionalPrice === 'object' && 'amount' in raw.promotionalPrice)
+                    ? new Money(raw.promotionalPrice.amount, raw.promotionalPrice.currency)
+                    : new Money(raw.promotionalPrice))
+                : undefined,
             stock: raw.stock || 0,
             reservedStock: raw.reservedStock || 0,
             imageUrl: raw.imageUrl || raw.image, // Handle both legacy and new fields

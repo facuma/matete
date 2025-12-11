@@ -26,7 +26,7 @@ export async function GET() {
             // 2. Products
             prisma.product.findMany({
                 orderBy: { createdAt: 'desc' },
-                take: 50, // Limit to avoid massive payload in one go
+                take: 12, // Limit to avoidance of OOM - Optimized from 50
                 select: {
                     id: true,
                     name: true,

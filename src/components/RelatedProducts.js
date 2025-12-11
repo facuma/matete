@@ -5,38 +5,50 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProductCard } from './organisms/ProductCard';
 
 export default function RelatedProducts({ currentProductId, currentCategory }) {
-    const { products: allProducts, loading } = useProducts();
+    const { repository } = useProducts();
     const [displayProducts, setDisplayProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef(null);
 
     useEffect(() => {
-        if (!allProducts || allProducts.length === 0) return;
+        async function loadRelated() {
+            if (!repository) return;
+            try {
+                // Fetch a pool of products to choose from
+                // We ask for a bit more data to ensure good related items
+                const allProducts = await repository.getAll({ limit: 50 });
 
-        // Filter out current product
-        let available = allProducts.filter(p => p.id !== parseInt(currentProductId));
+                // Filter out current product
+                let available = allProducts.filter(p => p.id !== parseInt(currentProductId));
 
-        // Cross-selling logic
-        let prioritized = [];
-        let others = [];
+                // Cross-selling logic
+                let prioritized = [];
+                let others = [];
 
-        if (currentCategory === 'Mates') {
-            prioritized = available.filter(p => ['Bombillas', 'Yerbas'].includes(p.category));
-            others = available.filter(p => !['Bombillas', 'Yerbas'].includes(p.category));
-        } else if (currentCategory === 'Termos') {
-            prioritized = available.filter(p => ['Mates', 'Accesorios'].includes(p.category));
-            others = available.filter(p => !['Mates', 'Accesorios'].includes(p.category));
-        } else {
-            // Default: same category or random
-            prioritized = available.filter(p => p.category === currentCategory);
-            others = available.filter(p => p.category !== currentCategory);
+                if (currentCategory === 'Mates') {
+                    prioritized = available.filter(p => ['Bombillas', 'Yerbas'].includes(p.category));
+                    others = available.filter(p => !['Bombillas', 'Yerbas'].includes(p.category));
+                } else if (currentCategory === 'Termos') {
+                    prioritized = available.filter(p => ['Mates', 'Accesorios'].includes(p.category));
+                    others = available.filter(p => !['Mates', 'Accesorios'].includes(p.category));
+                } else {
+                    // Default: same category or random
+                    prioritized = available.filter(p => p.category === currentCategory);
+                    others = available.filter(p => p.category !== currentCategory);
+                }
+
+                // Combine: Prioritized first, then others
+                const finalSelection = [...prioritized, ...others].slice(0, 8); // Limit to 8 items
+                setDisplayProducts(finalSelection);
+            } catch (err) {
+                console.error("Failed to load related products", err);
+            } finally {
+                setLoading(false);
+            }
         }
 
-        // Combine: Prioritized first, then others
-        const finalSelection = [...prioritized, ...others].slice(0, 8); // Limit to 8 items
-
-        setDisplayProducts(finalSelection);
-
-    }, [currentProductId, currentCategory, allProducts]);
+        loadRelated();
+    }, [currentProductId, currentCategory, repository]);
 
     const scroll = (direction) => {
         if (scrollContainerRef.current) {

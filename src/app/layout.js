@@ -15,6 +15,10 @@ export const metadata = {
   description: 'Mates artesanales, bombillas premium y los mejores accesorios para que tu momento sea único.',
 };
 
+import { ProductProvider } from '@/contexts/product-context';
+
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 export default async function RootLayout({ children }) {
   const settings = await prisma.siteSettings.findUnique({ where: { id: 1 } }).catch(() => null);
   const pixelId = settings?.facebookPixelId;
@@ -29,12 +33,15 @@ export default async function RootLayout({ children }) {
           <ServiceProvider>
             <CartProvider>
               <StoreProvider>
-                <ConditionalLayout>
+                <ProductProvider>
+                  <ConditionalLayout>
 
-                  {children}
-                </ConditionalLayout>
-                <WhatsAppButton />
-                <Toaster position="top-right" richColors />
+                    {children}
+                    <SpeedInsights />
+                  </ConditionalLayout>
+                  <WhatsAppButton />
+                  <Toaster position="top-right" richColors />
+                </ProductProvider>
               </StoreProvider>
             </CartProvider>
           </ServiceProvider>

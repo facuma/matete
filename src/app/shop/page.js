@@ -13,7 +13,7 @@ import { useProducts } from '@/contexts/product-context';
 
 export default function ShopPage() {
     const { categories } = useCategories();
-    const { products: allProducts, loading: productsLoading } = useProducts();
+    const { products, fetchProducts, loading: productsLoading } = useProducts();
     const [selectedCategory, setSelectedCategory] = useState('todos');
     const [transferDiscount, setTransferDiscount] = useState(20);
     const { addItem } = useCart();
@@ -35,7 +35,7 @@ export default function ShopPage() {
         };
     }, []);
 
-    // Fetch Transfer Discount only (Products come from Context)
+    // Fetch Transfer Discount
     useEffect(() => {
         fetch('/api/promotions/transfer')
             .then(res => res.json())
@@ -45,33 +45,15 @@ export default function ShopPage() {
             .catch(err => console.error(err));
     }, []);
 
-    // Client-side Filtering Logic
-    const products = React.useMemo(() => {
-        if (selectedCategory === 'todos') return allProducts;
-
-        // Find the selected category object (could be parent or child)
-        let targetIds = [];
-
-        // Helper to search in tree
-        const findCategory = (slug, list) => {
-            for (const cat of list) {
-                if (cat.slug === slug) return cat;
-                if (cat.children) {
-                    const found = findCategory(slug, cat.children);
-                    if (found) return found;
-                }
-            }
-            return null;
-        };
-
-        const category = findCategory(selectedCategory, categories);
-
-        if (category) {
-            targetIds = [category.id, ...(category.children?.map(c => c.id) || [])];
-        }
-
-        return allProducts.filter(p => targetIds.includes(p.categoryId));
-    }, [selectedCategory, allProducts, categories]);
+    // Fetch Products when Category Changes
+    useEffect(() => {
+        // Debounce could be added here if rapid clicking occurs, 
+        // but for category selection it's usually fine.
+        fetchProducts({
+            category: selectedCategory,
+            limit: 50 // Fetch more for the shop page
+        });
+    }, [selectedCategory, fetchProducts]);
 
     const handleCategoryClick = (category) => {
         setSelectedCategory(category.slug);
