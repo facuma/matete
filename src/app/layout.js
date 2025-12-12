@@ -13,9 +13,6 @@ import { ServiceProvider } from '@/contexts/services/service-context';
 export const metadata = {
   title: 'MATETÉ - El ritual de cada día',
   description: 'Mates artesanales, bombillas premium y los mejores accesorios para que tu momento sea único.',
-  icons: {
-    icon: '/icon.png',
-  },
 };
 
 import { ProductProvider } from '@/contexts/product-context';
