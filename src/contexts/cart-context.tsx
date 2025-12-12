@@ -107,7 +107,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const addItem = (productData: any, quantity: number = 1, options: any = {}) => {
         // Adapt raw product data to Domain if needed (ProductDetail component passes what?)
         // If it passes a full object, we ensure it's a domain entity
-        const product = productData instanceof Product ? productData : new Product(productData);
+        let productInput = productData;
+
+        // Fix: Ensure price is a Money object if passed as number (e.g. from ProductDetailClient with extras)
+        if (!(productData instanceof Product)) {
+            if (typeof productData.price === 'number') {
+                productInput = {
+                    ...productInput,
+                    price: new Money(productData.price, 'ARS')
+                };
+            }
+
+            // Fix: Ensure promotionalPrice is a Money object if passed (e.g. from JSON/Prisma)
+            if (productData.promotionalPrice && !(productData.promotionalPrice instanceof Money)) {
+                const promoVal = typeof productData.promotionalPrice === 'number'
+                    ? productData.promotionalPrice
+                    : (productData.promotionalPrice.amount || 0);
+
+                productInput = {
+                    ...productInput,
+                    promotionalPrice: new Money(promoVal, 'ARS')
+                };
+            }
+        }
+
+        const product = productInput instanceof Product ? productInput : new Product(productInput);
 
         cartService.addItem(product, quantity, options);
         refreshState();
