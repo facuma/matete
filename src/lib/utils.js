@@ -12,3 +12,10 @@ export const getProductImage = (product) => {
     // Fallback a placeholder estático si no hay imagen
     return '/placeholder-mate.jpg';
 };
+
+export const formatPrice = (value) => new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+}).format(value);

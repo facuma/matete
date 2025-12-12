@@ -9,6 +9,7 @@ import { event } from '@/components/FacebookPixel';
 import RelatedProducts from '@/components/RelatedProducts';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import ProductCard from '@/components/organisms/ProductCard';
+import { ProductOptionCard } from '@/components/molecules/ProductOptionCard';
 
 
 import ProductSkeleton from '@/components/ProductSkeleton'; // You might need a more specific skeleton
@@ -112,6 +113,28 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
         const currentIndex = images.indexOf(activeImage);
         const nextIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
         setActiveImage(images[nextIndex]);
+    };
+
+    const handleOptionToggle = (optionName, value) => {
+        setSelectedOptions(prev => {
+            const current = prev[optionName] || [];
+            const exists = current.find(v => v.id === value.id);
+
+            let updated;
+            if (exists) {
+                updated = current.filter(v => v.id !== value.id);
+            } else {
+                updated = [...current, value];
+            }
+
+            if (updated.length === 0) {
+                const newState = { ...prev };
+                delete newState[optionName];
+                return newState;
+            }
+
+            return { ...prev, [optionName]: updated };
+        });
     };
 
     const handlePrevImage = (e) => {
@@ -255,83 +278,18 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
 
                                         </div>
 
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             {option.values.map(val => {
-                                                // Check if selected (handling array or single object for backward compatibility safe)
-                                                // We standardized on: selectedOptions[option.name] = [val1, val2] OR we treat all options as flattened
-
-                                                // New State Structure: selectedOptions = { [optionName]: [val1, val2] }
                                                 const currentSelection = selectedOptions[option.name] || [];
                                                 const isSelected = currentSelection.some(v => v.id === val.id);
 
-                                                const linkedImg = val.linkedProduct?.imageUrl || (val.linkedProduct?.images && val.linkedProduct.images[0]);
-
                                                 return (
-                                                    <button
+                                                    <ProductOptionCard
                                                         key={val.id}
-                                                        className={`group relative flex items-start gap-3 p-3 text-left rounded-xl border transition-all duration-200 h-full ${isSelected
-                                                            ? 'border-black bg-stone-50 ring-1 ring-black'
-                                                            : 'border-stone-200 hover:border-stone-400 bg-white'
-                                                            }`}
-                                                        onClick={() => {
-                                                            setSelectedOptions(prev => {
-                                                                const current = prev[option.name] || [];
-                                                                const exists = current.find(v => v.id === val.id);
-
-                                                                let updated;
-                                                                if (exists) {
-                                                                    updated = current.filter(v => v.id !== val.id);
-                                                                } else {
-                                                                    // For "Extras", allow multiple? 
-                                                                    // User said "VARIOS PRODUCTOS EXTRA". Let's assume Additive (Checkbox).
-                                                                    updated = [...current, val];
-
-                                                                    // If we wanted Single Select (Radio):
-                                                                    // updated = [val];
-                                                                }
-
-                                                                // Clean up empty arrays
-                                                                if (updated.length === 0) {
-                                                                    const newState = { ...prev };
-                                                                    delete newState[option.name];
-                                                                    return newState;
-                                                                }
-
-                                                                return { ...prev, [option.name]: updated };
-                                                            });
-                                                        }}
-                                                    >
-                                                        {/* Visual Checkmark */}
-                                                        <div className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-black border-black text-white' : 'border-stone-300 bg-white group-hover:border-stone-400'}`}>
-                                                            {isSelected && <Check size={12} strokeWidth={3} />}
-                                                        </div>
-
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <span className="text-sm font-bold text-[#1a1a1a] leading-tight line-clamp-2">{val.name}</span>
-                                                            </div>
-
-                                                            {val.priceModifier > 0 && (
-                                                                <span className="block text-xs font-semibold text-stone-500 mt-1">
-                                                                    +{formatPrice(val.priceModifier)}
-                                                                </span>
-                                                            )}
-
-                                                            {/* Optional Description or Linked Product preview */}
-                                                        </div>
-
-                                                        {/* Mini Thumbnail if available */}
-                                                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0 border border-stone-100 relative">
-                                                            {linkedImg ? (
-                                                                <img src={linkedImg} alt={val.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                // Static Icon Placeholder instead of Spinner
-                                                                <div className="w-full h-full flex items-center justify-center text-stone-300">
-                                                                    <ShoppingCart size={14} />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </button>
+                                                        value={val}
+                                                        isSelected={isSelected}
+                                                        onToggle={() => handleOptionToggle(option.name, val)}
+                                                    />
                                                 );
                                             })}
                                         </div>
