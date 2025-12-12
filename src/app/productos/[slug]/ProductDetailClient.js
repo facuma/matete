@@ -245,13 +245,14 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                         {/* RENDERIZADO VISUAL DE OPCIONES */}
                         {hasOptions && (
                             <div className="space-y-6 mb-8 pt-6 border-t border-stone-200">
+                                <span className="text-xs text-stone-500 font-medium">Agrega un complemento opcional</span>
                                 {validOptions.map(option => (
                                     <div key={option.id}>
                                         <div className="flex items-center justify-between mb-4">
                                             <label className="text-sm font-bold text-[#1a1a1a] uppercase tracking-widest">
                                                 {option.name}
                                             </label>
-                                            <span className="text-xs text-stone-500 font-medium">Agrega un complemento opcional</span>
+
                                         </div>
 
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
