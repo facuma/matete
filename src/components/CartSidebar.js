@@ -69,8 +69,8 @@ export default function CartSidebar() {
                                                 </span>
                                             )}
                                         </div>
-                                        {item.selectedOptions && Object.entries(item.selectedOptions).map(([key, val]) => (
-                                            <p key={key} className="text-xs text-stone-500">+ {val.name}</p>
+                                        {item.selectedOptions && Object.values(item.selectedOptions).flat().map((val, idx) => (
+                                            <p key={idx} className="text-xs text-stone-500">+ {val.name}</p>
                                         ))}
                                         <p className="text-[#8B5A2B] text-sm font-medium mb-2">{product.effectivePrice.format()}</p>
                                         <div className="flex items-center gap-3">
