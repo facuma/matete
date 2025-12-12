@@ -33,7 +33,15 @@ export default function CheckoutPage() {
         setIsAuthModalOpen,
         session,
         updateSession,
-        createOrder
+        createOrder,
+        // Discount
+        discountCode,
+        handleDiscountChange,
+        handleApplyDiscount,
+        handleRemoveDiscount,
+        appliedDiscount,
+        discountError,
+        validatingDiscount
     } = useCheckout();
 
     const mpAvailable = !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
@@ -154,6 +162,15 @@ export default function CheckoutPage() {
                     <OrderSummary
                         shippingPrice={selectedShipping?.price || 0}
                         paymentMethod={selectedMethod}
+                        transferDiscount={transferDiscount}
+                        // Discount Props
+                        discountCode={discountCode}
+                        onDiscountChange={handleDiscountChange}
+                        onApplyDiscount={handleApplyDiscount}
+                        onRemoveDiscount={handleRemoveDiscount}
+                        appliedDiscount={appliedDiscount}
+                        discountError={discountError}
+                        isValidating={validatingDiscount}
                     />
                 </div>
             </div>

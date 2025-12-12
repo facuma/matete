@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo } from 'react';
 import { useCart } from '@/contexts/cart-context'; // Will eventualy be CartService
 import { useServices } from '@/contexts/services/service-context';
@@ -13,6 +15,7 @@ interface OrderSummaryProps {
     paymentMethod?: 'mercadopago' | 'transfer';
     discountCode?: string;
     appliedDiscount?: any; // Type strictly later
+    transferDiscount?: number;
     onDiscountChange?: (code: string) => void;
     onApplyDiscount?: () => void;
     onRemoveDiscount?: () => void;
@@ -24,6 +27,7 @@ export const OrderSummary = ({
     shippingPrice = 0,
     paymentMethod = 'mercadopago',
     appliedDiscount,
+    transferDiscount = 10,
     discountCode = '',
     onDiscountChange,
     onApplyDiscount,
@@ -47,7 +51,12 @@ export const OrderSummary = ({
             const product = item.product; // Already a domain object
 
             // Base calculation (promotional?)
-            const linePrice = pricingService.calculatePrice(product, item.quantity, paymentMethod);
+            const linePrice = pricingService.calculatePrice(
+                product,
+                item.quantity,
+                paymentMethod,
+                { transferDiscountPercentage: transferDiscount }
+            );
 
             // Regular calculation for comparison
             const regularPrice = product.price.multiply(item.quantity);
@@ -75,7 +84,7 @@ export const OrderSummary = ({
             savings: new Money(savingsAmount),
             shipping: new Money(shippingPrice)
         };
-    }, [cart, pricingService, paymentMethod, appliedDiscount, shippingPrice]);
+    }, [cart, pricingService, paymentMethod, appliedDiscount, shippingPrice, transferDiscount]);
 
     return (
         <div className="bg-stone-50 p-8 rounded-xl h-fit border border-stone-200 sticky top-28">

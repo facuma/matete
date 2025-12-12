@@ -6,6 +6,7 @@ export interface PricingContext {
     quantity: number;
     paymentMethod?: string;
     discountCode?: string;
+    transferDiscountPercentage?: number;
 }
 
 export interface IPricingStrategy {

@@ -111,24 +111,33 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
         // Fix: Ensure price is a Money object if passed as number (e.g. from ProductDetailClient with extras)
         if (!(productData instanceof Product)) {
-            if (typeof productData.price === 'number') {
-                productInput = {
-                    ...productInput,
-                    price: new Money(productData.price, 'ARS')
-                };
+            // Intelligent reconstruction of Product Entity from Client Payload
+            // The client passes: { ...product, price: finalPrice, regularPrice: originalBasePrice }
+            // We want: Entity.price = regularPrice (if exists) else price
+            //          Entity.promotionalPrice = price (if regularPrice exists and < price)
+
+            let finalRegularPriceAmount = productData.regularPrice; // Usually number from client
+            let finalEffectivePriceAmount = productData.price; // Usually number from client
+
+            // Normalization
+            if (typeof finalRegularPriceAmount === 'object') finalRegularPriceAmount = finalRegularPriceAmount.amount;
+            if (typeof finalEffectivePriceAmount === 'object') finalEffectivePriceAmount = finalEffectivePriceAmount.amount;
+
+            // If no regularPrice passed, fallback to price
+            if (finalRegularPriceAmount === undefined || finalRegularPriceAmount === null) {
+                finalRegularPriceAmount = finalEffectivePriceAmount;
             }
 
-            // Fix: Ensure promotionalPrice is a Money object if passed (e.g. from JSON/Prisma)
-            if (productData.promotionalPrice && !(productData.promotionalPrice instanceof Money)) {
-                const promoVal = typeof productData.promotionalPrice === 'number'
-                    ? productData.promotionalPrice
-                    : (productData.promotionalPrice.amount || 0);
+            const hasActiveDiscount = finalEffectivePriceAmount < finalRegularPriceAmount;
 
-                productInput = {
-                    ...productInput,
-                    promotionalPrice: new Money(promoVal, 'ARS')
-                };
-            }
+            productInput = {
+                ...productData,
+                price: new Money(finalRegularPriceAmount, 'ARS'),
+                promotionalPrice: hasActiveDiscount ? new Money(finalEffectivePriceAmount, 'ARS') : undefined
+            };
+
+            // Fix: Ensure other Money fields are safe if they exist physically in object but not used by us dynamically
+            // (The above explicit assignment overrides the ...spread for price/promotionalPrice)
         }
 
         const product = productInput instanceof Product ? productInput : new Product(productInput);

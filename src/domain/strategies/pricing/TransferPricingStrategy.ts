@@ -2,14 +2,11 @@ import { IPricingStrategy, PricingContext } from '../../interfaces/IPricingStrat
 import { Money } from '../../value-objects/Money';
 
 export class TransferPricingStrategy implements IPricingStrategy {
-    private readonly discountMock: number = 20; // This should ideally come from configuration/repo
-
     calculate(basePrice: Money, context: PricingContext): Money {
-        // If payment method is not transfer, return 0 or throw? 
-        // Strategy pattern usually returns the *result* price.
+        // Use percentage from context or default to 10 (matching user expectation)
+        const percentage = context.transferDiscountPercentage ?? 10;
 
-        // This strategy implies we apply the discount
-        const discountPercentage = this.discountMock / 100;
+        const discountPercentage = percentage / 100;
         const discountAmount = basePrice.multiply(discountPercentage);
         const finalPricePerUnit = basePrice.subtract(discountAmount);
 

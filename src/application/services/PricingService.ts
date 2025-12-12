@@ -19,11 +19,12 @@ export class PricingService {
         this.strategies.set(name, strategy);
     }
 
-    calculatePrice(product: Product, quantity: number = 1, paymentMethod: string = 'credit_card'): Money {
+    calculatePrice(product: Product, quantity: number = 1, paymentMethod: string = 'credit_card', extraOptions: { transferDiscountPercentage?: number } = {}): Money {
         const context: PricingContext = {
             product,
             quantity,
-            paymentMethod
+            paymentMethod,
+            ...extraOptions
         };
 
         // 1. Determine base effective price (Regular vs Promotional)

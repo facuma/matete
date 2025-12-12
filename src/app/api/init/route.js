@@ -43,6 +43,27 @@ export async function GET() {
                             name: true,
                             slug: true
                         }
+                    },
+                    options: {
+                        select: {
+                            id: true,
+                            name: true,
+                            values: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    priceModifier: true,
+                                    linkedProduct: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            imageUrl: true,
+                                            images: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }),
