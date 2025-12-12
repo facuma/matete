@@ -268,35 +268,30 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                         {/* RENDERIZADO VISUAL DE OPCIONES */}
                         {hasOptions && (
                             <div className="space-y-6 mb-8 pt-6 border-t border-stone-200">
-                                <span className="text-xs text-stone-500 font-medium">Agrega un complemento opcional</span>
-                                {validOptions.map(option => (
-                                    <div key={option.id}>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <label className="text-sm font-bold text-[#1a1a1a] uppercase tracking-widest">
-                                                {option.name}
-                                            </label>
+                                <span className="text-xs text-stone-500 font-medium">
+                                    Agrega un complemento opcional
+                                </span>
 
-                                        </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {validOptions.flatMap(option =>
+                                        option.values.map(val => {
+                                            const currentSelection = selectedOptions[option.name] || [];
+                                            const isSelected = currentSelection.some(v => v.id === val.id);
 
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {option.values.map(val => {
-                                                const currentSelection = selectedOptions[option.name] || [];
-                                                const isSelected = currentSelection.some(v => v.id === val.id);
-
-                                                return (
-                                                    <ProductOptionCard
-                                                        key={val.id}
-                                                        value={val}
-                                                        isSelected={isSelected}
-                                                        onToggle={() => handleOptionToggle(option.name, val)}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
+                                            return (
+                                                <ProductOptionCard
+                                                    key={val.id}
+                                                    value={val}
+                                                    isSelected={isSelected}
+                                                    onToggle={() => handleOptionToggle(option.name, val)}
+                                                />
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
                         )}
+
 
                         {/* Botón Único de Acción */}
                         <div className="mt-auto pt-4">
