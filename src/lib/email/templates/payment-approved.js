@@ -118,7 +118,7 @@ export function getPaymentApprovedTemplate(order) {
                             <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e5e5;">
                                 <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">¿Tenés alguna consulta?</p>
                                 <p style="margin: 0; color: #666; font-size: 14px;">
-                                    Contactanos por WhatsApp: <a href="https://wa.me/5493624123456" style="color: #8B5A2B; text-decoration: none;"><strong>+54 9 362 4123456</strong></a><br>
+                                    Contactanos por WhatsApp: <a href="https://wa.me/543624543810" style="color: #8B5A2B; text-decoration: none;"><strong>+54 9 362 4123456</strong></a><br>
                                     O por email: <a href="mailto:matete@clickarg.com" style="color: #8B5A2B; text-decoration: none;">matete@clickarg.com</a>
                                 </p>
                             </div>

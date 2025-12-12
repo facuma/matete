@@ -209,7 +209,16 @@ export const useCheckout = () => {
         // Ideally this moves to an API service class
         try {
             let total = cartTotal;
-            // Apply transfer discount if needed
+
+            // Apply Coupon Discount FIRST (if exists)
+            if (appliedDiscount) {
+                total = total * (1 - appliedDiscount.percentage / 100);
+            }
+
+            // Apply transfer discount if needed (Cumulative? Or exclusive? Usually exclusive or sequential)
+            // If transfer is selected, we usually apply transfer discount INSTEAD or ON TOP.
+            // Current logic: Transfer strategy in PricingService applies on top of effective price.
+            // Let's assume sequential: (Total - Coupon) * Transfer.
             if (method === 'transfer' && transferDiscount > 0) {
                 total = total * (1 - transferDiscount / 100);
             }
@@ -230,7 +239,8 @@ export const useCheckout = () => {
                 paymentMethod: method,
                 paymentDetails: { paymentId },
                 status,
-                userId: session?.user?.id
+                userId: session?.user?.id,
+                discountCode: appliedDiscount?.code || null
             };
 
             const response = await fetch('/api/orders', {

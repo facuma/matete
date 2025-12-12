@@ -20,6 +20,17 @@ export class OrderService {
             });
 
             if (discount) {
+                // Validation at Order Creation time to prevent race conditions
+                const now = new Date();
+                const isExpired = discount.expiresAt && discount.expiresAt < now;
+                const isExhausted = discount.usedCount >= discount.usageLimit;
+
+                if (isExpired || isExhausted) {
+                    // Decide strategy: Fail order OR Continue without discount?
+                    // Failing is safer to avoid user confusion ("Why did I pay full price?")
+                    throw new Error(`El código de descuento ${data.discountCode} ya no es válido.`);
+                }
+
                 await prisma.discountCode.update({
                     where: { id: discount.id },
                     data: { usedCount: { increment: 1 } }

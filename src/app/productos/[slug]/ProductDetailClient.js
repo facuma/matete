@@ -83,7 +83,10 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
     const basePriceValue = getPriceValue(product.promotionalPrice || product.price);
     const regularPriceValue = getPriceValue(product.price);
 
-    const extrasPrice = Object.values(selectedOptions).reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
+    // Updated for multiple selection structure (Arrays)
+    const extrasPrice = Object.values(selectedOptions)
+        .flat()
+        .reduce((acc, val) => acc + (val?.priceModifier || 0), 0);
     const currentPrice = basePriceValue + extrasPrice;
 
     // Formatting helper
@@ -235,61 +238,92 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
 
 
                         {/* RENDERIZADO VISUAL DE OPCIONES */}
+                        {/* RENDERIZADO VISUAL DE OPCIONES */}
                         {hasOptions && (
                             <div className="space-y-6 mb-8 pt-6 border-t border-stone-200">
                                 {validOptions.map(option => (
                                     <div key={option.id}>
-                                        <label className="block text-sm font-bold text-[#1a1a1a] mb-3 uppercase tracking-widest">
-                                            {option.name}
-                                        </label>
-                                        <div className="flex flex-wrap gap-3">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <label className="text-sm font-bold text-[#1a1a1a] uppercase tracking-widest">
+                                                {option.name}
+                                            </label>
+                                            <span className="text-xs text-stone-500 font-medium">Agrega un complemento opcional</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                             {option.values.map(val => {
-                                                const isSelected = selectedOptions[option.name]?.id === val.id;
+                                                // Check if selected (handling array or single object for backward compatibility safe)
+                                                // We standardized on: selectedOptions[option.name] = [val1, val2] OR we treat all options as flattened
+
+                                                // New State Structure: selectedOptions = { [optionName]: [val1, val2] }
+                                                const currentSelection = selectedOptions[option.name] || [];
+                                                const isSelected = currentSelection.some(v => v.id === val.id);
+
                                                 const linkedImg = val.linkedProduct?.imageUrl || (val.linkedProduct?.images && val.linkedProduct.images[0]);
 
                                                 return (
                                                     <button
                                                         key={val.id}
-                                                        className={`group relative flex flex-col items-center p-2 rounded-xl border-2 transition-all duration-200 w-28 ${isSelected
-                                                            ? 'border-black bg-stone-50'
-                                                            : 'border-stone-100 hover:border-stone-300 bg-white'
+                                                        className={`group relative flex items-start gap-3 p-3 text-left rounded-xl border transition-all duration-200 h-full ${isSelected
+                                                            ? 'border-black bg-stone-50 ring-1 ring-black'
+                                                            : 'border-stone-200 hover:border-stone-400 bg-white'
                                                             }`}
                                                         onClick={() => {
                                                             setSelectedOptions(prev => {
-                                                                if (prev[option.name]?.id === val.id) {
+                                                                const current = prev[option.name] || [];
+                                                                const exists = current.find(v => v.id === val.id);
+
+                                                                let updated;
+                                                                if (exists) {
+                                                                    updated = current.filter(v => v.id !== val.id);
+                                                                } else {
+                                                                    // For "Extras", allow multiple? 
+                                                                    // User said "VARIOS PRODUCTOS EXTRA". Let's assume Additive (Checkbox).
+                                                                    updated = [...current, val];
+
+                                                                    // If we wanted Single Select (Radio):
+                                                                    // updated = [val];
+                                                                }
+
+                                                                // Clean up empty arrays
+                                                                if (updated.length === 0) {
                                                                     const newState = { ...prev };
                                                                     delete newState[option.name];
                                                                     return newState;
                                                                 }
-                                                                return { ...prev, [option.name]: val };
+
+                                                                return { ...prev, [option.name]: updated };
                                                             });
                                                         }}
                                                     >
                                                         {/* Visual Checkmark */}
-                                                        {isSelected && (
-                                                            <div className="absolute top-2 right-2 bg-black text-white rounded-full p-0.5 z-10">
-                                                                <Check size={12} strokeWidth={3} />
-                                                            </div>
-                                                        )}
+                                                        <div className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-black border-black text-white' : 'border-stone-300 bg-white group-hover:border-stone-400'}`}>
+                                                            {isSelected && <Check size={12} strokeWidth={3} />}
+                                                        </div>
 
-                                                        {/* Image or Placeholder */}
-                                                        <div className="w-full aspect-square rounded-lg overflow-hidden bg-stone-100 mb-2 relative">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <span className="text-sm font-bold text-[#1a1a1a] leading-tight line-clamp-2">{val.name}</span>
+                                                            </div>
+
+                                                            {val.priceModifier > 0 && (
+                                                                <span className="block text-xs font-semibold text-stone-500 mt-1">
+                                                                    +{formatPrice(val.priceModifier)}
+                                                                </span>
+                                                            )}
+
+                                                            {/* Optional Description or Linked Product preview */}
+                                                        </div>
+
+                                                        {/* Mini Thumbnail if available */}
+                                                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0 border border-stone-100 relative">
                                                             {linkedImg ? (
                                                                 <img src={linkedImg} alt={val.name} className="w-full h-full object-cover" />
                                                             ) : (
+                                                                // Static Icon Placeholder instead of Spinner
                                                                 <div className="w-full h-full flex items-center justify-center text-stone-300">
-                                                                    <div className="w-8 h-8 rounded-full border-2 border-dashed border-stone-300"></div>
+                                                                    <ShoppingCart size={14} />
                                                                 </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Name and Price */}
-                                                        <div className="text-center w-full">
-                                                            <span className="block text-xs font-bold text-[#1a1a1a] leading-tight mb-0.5 line-clamp-2 min-h-[2.5em]">{val.name}</span>
-                                                            {val.priceModifier > 0 && (
-                                                                <span className="block text-[10px] font-medium text-stone-500">
-                                                                    +{formatPrice(val.priceModifier)}
-                                                                </span>
                                                             )}
                                                         </div>
                                                     </button>
@@ -305,7 +339,13 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                         <div className="mt-auto pt-4">
                             <Button
                                 onClick={() => {
-                                    const regularPrice = regularPriceValue + extrasPrice;
+                                    // Flatten options for Cart (if Cart supports it) or keep structured?
+                                    // CartItem usually stores options as Record<string, any>.
+                                    // If we pass Arrays, ensure CartContext handles it.
+                                    // Our CartContext stores what we pass. CartItem.total does NOT calculate extras automatically in Client (yet),
+                                    // logic is in Service/Pricing. Pricing Service needs to handle Arrays!
+
+                                    // Let's pass the raw structure. It works if PricingService iterates it.
                                     addItem({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
                                 }}
                                 className="w-full py-6 text-base font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full shadow-xl flex items-center justify-center gap-3 uppercase transition-transform hover:scale-[1.01]"
