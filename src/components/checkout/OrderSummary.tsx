@@ -98,9 +98,9 @@ export const OrderSummary = ({
                         <div key={item.id} className="flex justify-between text-sm">
                             <span className="text-stone-600">
                                 {item.quantity}x {product.name}
-                                {item.selectedOptions && Object.values(item.selectedOptions).length > 0 && (
+                                {item.selectedOptions && Object.values(item.selectedOptions).flat().length > 0 && (
                                     <span className="block text-xs text-stone-400 ml-4">
-                                        {Object.values(item.selectedOptions).map((val: any) => `+ ${val.name}`).join(', ')}
+                                        {Object.values(item.selectedOptions).flat().map((val: any) => `+ ${val.name}`).join(', ')}
                                     </span>
                                 )}
                             </span>
