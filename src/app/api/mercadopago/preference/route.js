@@ -1,14 +1,30 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-
-const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+import { getMpToken } from '@/lib/mercadopago';
 
 export async function POST(request) {
     try {
         const body = await request.json();
         const { items, payer } = body;
 
+        if (!items || items.length === 0) {
+            return NextResponse.json({ error: 'No items provided' }, { status: 400 });
+        }
+
+        // 1. Get Credentials (Helper handles DB priority + Env fallback + Refresh)
+        let accessToken;
+        try {
+            accessToken = await getMpToken();
+        } catch (err) {
+            console.error('Failed to get MP token:', err);
+            return NextResponse.json({ error: 'Payment configuration missing or invalid' }, { status: 500 });
+        }
+
+        // 2. Initialize MP Client
+        const client = new MercadoPagoConfig({ accessToken: accessToken });
         const preference = new Preference(client);
+
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
         const result = await preference.create({
             body: {
@@ -32,17 +48,17 @@ export async function POST(request) {
                     }
                 },
                 back_urls: {
-                    success: 'https://00a44bb49a38.ngrok-free.app/checkout/success',
-                    failure: 'https://00a44bb49a38.ngrok-free.app/checkout/failure',
-                    pending: 'https://00a44bb49a38.ngrok-free.app/checkout/pending',
+                    success: `${baseUrl}/checkout/success`,
+                    failure: `${baseUrl}/checkout/failure`,
+                    pending: `${baseUrl}/checkout/pending`,
                 },
                 auto_return: 'approved',
                 statement_descriptor: "MATETE SHOP",
-                external_reference: `ORDER-${Date.now()}`, // Unique reference
-                notification_url: "https://00a44bb49a38.ngrok-free.app/api/mercadopago/webhook",
+                external_reference: `ORDER-${Date.now()}`,
+                notification_url: `${baseUrl}/api/mercadopago/webhook`,
                 payment_methods: {
                     excluded_payment_types: [
-                        { id: "ticket" } // Exclude cash payments (PagoFácil/Rapipago) for instant approval
+                        { id: "ticket" }
                     ],
                     installments: 12
                 },

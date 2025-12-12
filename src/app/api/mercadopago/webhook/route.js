@@ -3,9 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { sendOrderConfirmation, sendPaymentApproved } from '@/lib/email';
 import { logActivity } from '@/lib/admin-utils';
-
-// Removed static client initialization
-// const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+import { getMpToken } from '@/lib/mercadopago';
 
 export async function POST(request) {
     try {
@@ -25,16 +23,14 @@ export async function POST(request) {
 
         const paymentId = data.id;
 
-        // 1. Get Credentials (Single Tenant)
-        let accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN; // Fallback
-
+        // 1. Get Credentials (Helper handles everything)
+        let accessToken;
         try {
-            const settings = await prisma.siteSettings.findUnique({ where: { id: 1 } });
-            if (settings?.mpAccessToken) {
-                accessToken = settings.mpAccessToken;
-            }
+            accessToken = await getMpToken();
         } catch (e) {
-            console.warn('Error fetching site settings for webhook, using env var');
+            console.error('Error fetching MP token for webhook:', e);
+            // If we can't get a token, we can't query the payment status.
+            return NextResponse.json({ received: true, error: 'Token error' }, { status: 500 });
         }
 
         // 2. Initialize Client with dynamic token

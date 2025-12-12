@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import { Save } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminSettingsPage() {
     const [loading, setLoading] = useState(false);
@@ -65,6 +66,19 @@ export default function AdminSettingsPage() {
 
             <div className="bg-white p-6 rounded-lg shadow-md max-w-2xl">
                 <form onSubmit={handleSubmit}>
+                    <div className="mb-6">
+                        <h2 className="text-xl font-semibold mb-4 text-stone-800">Pagos</h2>
+                        <div className="bg-stone-50 p-4 rounded-lg flex justify-between items-center border border-stone-200">
+                            <div>
+                                <h3 className="font-medium text-stone-800">Mercado Pago</h3>
+                                <p className="text-sm text-stone-500">Conectá tu cuenta para recibir cobros y gestionar comisiones.</p>
+                            </div>
+                            <Link href="/admin/settings/payments" className="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                                Gestionar
+                            </Link>
+                        </div>
+                    </div>
+
                     <div className="mb-6">
                         <h2 className="text-xl font-semibold mb-4 text-stone-800">Integraciones</h2>
                         <div className="space-y-4">
