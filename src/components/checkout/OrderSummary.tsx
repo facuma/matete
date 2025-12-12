@@ -5,15 +5,32 @@ import { ProductMapper } from '@/infrastructure/mappers/ProductMapper';
 import { Money } from '@/domain/value-objects/Money';
 import { Typography } from '@/components/atoms/Typography';
 import { Badge } from '@/components/atoms/Badge';
+import Button from '@/components/ui/Button';
+import { X, Loader2, Tag } from 'lucide-react';
 
 interface OrderSummaryProps {
     shippingPrice?: number;
     paymentMethod?: 'mercadopago' | 'transfer';
     discountCode?: string;
     appliedDiscount?: any; // Type strictly later
+    onDiscountChange?: (code: string) => void;
+    onApplyDiscount?: () => void;
+    onRemoveDiscount?: () => void;
+    discountError?: string;
+    isValidating?: boolean;
 }
 
-export const OrderSummary = ({ shippingPrice = 0, paymentMethod = 'mercadopago', appliedDiscount }: OrderSummaryProps) => {
+export const OrderSummary = ({
+    shippingPrice = 0,
+    paymentMethod = 'mercadopago',
+    appliedDiscount,
+    discountCode = '',
+    onDiscountChange,
+    onApplyDiscount,
+    onRemoveDiscount,
+    discountError,
+    isValidating
+}: OrderSummaryProps) => {
     const { cart } = useCart();
     const { pricingService } = useServices();
 
@@ -85,6 +102,47 @@ export const OrderSummary = ({ shippingPrice = 0, paymentMethod = 'mercadopago',
                         </div>
                     )
                 })}
+            </div>
+
+            {/* Coupon Section */}
+            <div className="mb-6 pt-4 border-t border-stone-200">
+                {appliedDiscount ? (
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-700">
+                            <Tag size={16} />
+                            <span className="text-sm font-bold">{appliedDiscount.code}</span>
+                            <span className="text-xs">(-{appliedDiscount.percentage}%)</span>
+                        </div>
+                        <button
+                            onClick={onRemoveDiscount}
+                            className="text-green-700 hover:text-green-900 p-1 rounded-full hover:bg-green-100 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Código de descuento"
+                                value={discountCode}
+                                onChange={(e) => onDiscountChange && onDiscountChange(e.target.value)}
+                                className="flex-1 text-sm border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-black uppercase"
+                            />
+                            <Button
+                                onClick={onApplyDiscount}
+                                disabled={!discountCode || isValidating}
+                                className="px-4 py-2 text-xs font-bold bg-stone-800 text-white rounded-lg disabled:opacity-50"
+                            >
+                                {isValidating ? <Loader2 size={14} className="animate-spin" /> : 'Aplicar'}
+                            </Button>
+                        </div>
+                        {discountError && (
+                            <p className="text-xs text-red-500 font-medium">{discountError}</p>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="space-y-2 pt-4 border-t border-stone-200">

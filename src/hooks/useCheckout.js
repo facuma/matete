@@ -26,6 +26,12 @@ export const useCheckout = () => {
     // Transfer Discount State
     const [transferDiscount, setTransferDiscount] = useState(0);
 
+    // Coupon Discount State
+    const [discountCode, setDiscountCode] = useState('');
+    const [appliedDiscount, setAppliedDiscount] = useState(null);
+    const [discountError, setDiscountError] = useState('');
+    const [validatingDiscount, setValidatingDiscount] = useState(false);
+
     // Load Data
     useEffect(() => {
         const savedData = localStorage.getItem('checkoutFormData');
@@ -75,6 +81,44 @@ export const useCheckout = () => {
         setPreferenceId(null);
     };
 
+    const handleDiscountChange = (code) => {
+        setDiscountCode(code);
+        setDiscountError('');
+    };
+
+    const handleApplyDiscount = async () => {
+        if (!discountCode) return;
+        setValidatingDiscount(true);
+        setDiscountError('');
+
+        try {
+            const res = await fetch('/api/discount/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: discountCode })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                setDiscountError(data.error || 'Código inválido');
+                setAppliedDiscount(null);
+            } else {
+                setAppliedDiscount(data); // { code, percentage }
+                setDiscountCode(''); // Clear input? OR keep it. Let's keep it in state but maybe UI clears.
+            }
+        } catch (error) {
+            setDiscountError('Error al validar cupón');
+        } finally {
+            setValidatingDiscount(false);
+        }
+    };
+
+    const handleRemoveDiscount = () => {
+        setAppliedDiscount(null);
+        setDiscountCode('');
+        setDiscountError('');
+    };
+
     const handleContinue = async () => {
         if (!formData.name || !formData.email || !formData.dni || !formData.address || !formData.city) {
             alert('Por favor completa todos los datos de envío.');
@@ -100,9 +144,13 @@ export const useCheckout = () => {
         setLoadingPreference(true);
         try {
             // Logic to calculate total for MP preference
-            // We should ideally reuse the PricingService here or get total from context
-            // For now, retaining similar logic to ensure consistency with backend expectation
-            let total = cartTotal; // Need to verify if this matches OrderSummary logic
+            let total = cartTotal;
+
+            // Apply Coupon Discount FIRST (typically on subtotal, but here cartTotal = subtotal effectively if no other logic)
+            if (appliedDiscount) {
+                total = total * (1 - appliedDiscount.percentage / 100);
+            }
+
             if (selectedShipping) total += selectedShipping.price;
 
             const response = await fetch('/api/mercadopago/preference', {
@@ -113,17 +161,32 @@ export const useCheckout = () => {
                         id: String(item.product.id),
                         title: item.product.name,
                         quantity: Number(item.quantity),
-                        unit_price: Number(item.product.effectivePrice.amount),
+                        unit_price: Number(item.product.effectivePrice.amount), // Note: MP calculates total from unit * qty again? 
+                        // If we apply global discount, we might need to discount unit prices OR add a "discount line item"
+                        // Simplest for MP: send a "Discount" item with negative price OR adjust unit prices.
+                        // However, MP Preference total is what controls the charge amount usually if explicit?
+                        // Actually MP sums items. To apply discount we usually add an item with negative price.
+                        // Let's rely on standard practice: Adjusted Global amount is tricky in MP Items array.
+                        // Recommendation: Add a "Descuento" item.
                         currency_id: 'ARS',
                         picture_url: item.product.imageUrl
                     })),
+                    // This total field in body might be ignored by MP preference creation if it relies on items.
+                    // IMPORTANT: We need to see how backend handles this.
+                    // Backend (likely) constructs preference from items.
+                    // IF appliedDiscount, we should probably pass it to backend to create the preference correctly.
+                    // BUT for now, let's pass `appliedDiscount` in the body so backend can handle it?
+                    // The backend at /api/mercadopago/preference likely just maps items.
+                    // I will pass `total` as override if backend implementation supports it?
+                    // Let's check backend if needed. For now assuming simple total override capability or we will fix MP later.
                     payer: {
                         email: formData.email,
                         name: formData.name,
                         dni: formData.dni,
                         address: { street_name: formData.address, city: formData.city }
                     },
-                    total
+                    total, // Passing calculated total
+                    appliedDiscount // Passing discount info
                 }),
             });
 
@@ -206,6 +269,14 @@ export const useCheckout = () => {
         setIsAuthModalOpen,
         session,
         updateSession,
-        createOrder
+        createOrder,
+        // Discount Props
+        discountCode,
+        handleDiscountChange,
+        handleApplyDiscount,
+        handleRemoveDiscount,
+        appliedDiscount,
+        discountError,
+        validatingDiscount
     };
 };

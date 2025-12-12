@@ -23,7 +23,28 @@ const getProductMetadata = cache(async (slug) => {
                 rating: true,
                 category: true, // Needed for StructuredData breadcrumbs
                 brand: true,
-                material: true
+                material: true,
+                options: {
+                    select: {
+                        id: true,
+                        name: true,
+                        values: {
+                            select: {
+                                id: true,
+                                name: true,
+                                priceModifier: true,
+                                linkedProduct: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        imageUrl: true,
+                                        images: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
         return product;
