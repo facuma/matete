@@ -121,17 +121,11 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
         setActiveImage(images[prevIndex]);
     };
 
-    const validOptions = product.options?.filter(opt =>
-        opt.name &&
-        opt.name.trim() !== '' &&
-        opt.values &&
-        opt.values.length > 0 &&
-        opt.values.some(v => v.name && v.name.trim() !== '')
-    )
-        .map(opt => ({
-            ...opt,
-            values: opt.values.filter(v => v.name && v.name.trim() !== '')
-        })) || [];
+    const validOptions = product.options?.map(opt => ({
+        ...opt,
+        values: opt.values?.filter(v => v.name && v.name.trim() !== '') || []
+    }))
+        .filter(opt => opt.values.length > 0) || [];
     const hasOptions = validOptions.length > 0;
 
     return (
