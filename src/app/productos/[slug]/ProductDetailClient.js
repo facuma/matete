@@ -121,7 +121,17 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
         setActiveImage(images[prevIndex]);
     };
 
-    const validOptions = product.options?.filter(opt => opt.values && opt.values.length > 0) || [];
+    const validOptions = product.options?.filter(opt =>
+        opt.name &&
+        opt.name.trim() !== '' &&
+        opt.values &&
+        opt.values.length > 0 &&
+        opt.values.some(v => v.name && v.name.trim() !== '')
+    )
+        .map(opt => ({
+            ...opt,
+            values: opt.values.filter(v => v.name && v.name.trim() !== '')
+        })) || [];
     const hasOptions = validOptions.length > 0;
 
     return (
@@ -346,6 +356,7 @@ export default function ProductDetailClient({ initialProduct, slug, transferDisc
                                     // logic is in Service/Pricing. Pricing Service needs to handle Arrays!
 
                                     // Let's pass the raw structure. It works if PricingService iterates it.
+                                    const regularPrice = regularPriceValue + extrasPrice;
                                     addItem({ ...product, price: currentPrice, regularPrice }, 1, selectedOptions);
                                 }}
                                 className="w-full py-6 text-base font-bold tracking-widest bg-black hover:bg-[#333] text-white rounded-full shadow-xl flex items-center justify-center gap-3 uppercase transition-transform hover:scale-[1.01]"
