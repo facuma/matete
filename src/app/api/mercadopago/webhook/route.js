@@ -5,35 +5,48 @@ import { sendOrderConfirmation, sendPaymentApproved } from '@/lib/email';
 import { logActivity } from '@/lib/admin-utils';
 import { getMpToken } from '@/lib/mercadopago';
 
+// Helper for BigInt serialization in logs
+const safeStringify = (obj) => {
+    return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+        , 2);
+};
+
 export async function POST(request) {
     try {
         const body = await request.json();
 
-        console.log('Webhook received:', JSON.stringify(body, null, 2));
+        console.log('Webhook received:', safeStringify(body));
 
         const { type, data } = body;
 
-        if (!type || !data?.id) {
-            return NextResponse.json({ received: true }, { status: 200 });
+        // Validation
+        if (!type) {
+            return NextResponse.json({ received: true, message: 'No type provided' }, { status: 200 });
         }
 
+        // We only care about payment updates for now
         if (type !== 'payment') {
-            return NextResponse.json({ received: true }, { status: 200 });
+            return NextResponse.json({ received: true, message: 'Ignored non-payment type' }, { status: 200 });
+        }
+
+        if (!data?.id) {
+            return NextResponse.json({ received: true, message: 'No data.id provided' }, { status: 200 });
         }
 
         const paymentId = data.id;
 
-        // 1. Get Credentials (Helper handles everything)
+        // 1. Get Credentials
         let accessToken;
         try {
             accessToken = await getMpToken();
         } catch (e) {
             console.error('Error fetching MP token for webhook:', e);
-            // If we can't get a token, we can't query the payment status.
-            return NextResponse.json({ received: true, error: 'Token error' }, { status: 500 });
+            // Return 500 so MP retries later when we fix the config
+            return NextResponse.json({ received: true, error: 'Token configuration error: ' + e.message }, { status: 500 });
         }
 
-        // 2. Initialize Client with dynamic token
+        // 2. Initialize Client
         const client = new MercadoPagoConfig({ accessToken: accessToken });
         const payment = new Payment(client);
 
@@ -41,44 +54,41 @@ export async function POST(request) {
         try {
             paymentInfo = await payment.get({ id: paymentId });
         } catch (err) {
-            console.error('Error fetching payment info:', err);
-            // If we can't get payment info (e.g. invalid token), we can't process.
-            return NextResponse.json({ received: true, error: 'Failed to fetch payment info' }, { status: 200 });
+            console.error('Error fetching payment info from MP:', err);
+            // If the token is invalid or MP is down
+            return NextResponse.json({ received: true, error: 'Failed to fetch payment info from MercadoPago' }, { status: 500 });
         }
 
-        console.log('Payment info:', JSON.stringify(paymentInfo, null, 2));
+        console.log('Payment info fetched:', safeStringify(paymentInfo));
 
         // 3. Find Order
-        // Note: external_reference created in preference matches our order logic?
-        // In preference/route.js I set external_reference: `ORDER-${Date.now()}` which is NOT the order ID.
-        // But checkout/page.js sets mercadopagoPaymentId manually?
-        // Wait. The checkout flow in `checkout/page.js` calls `createOrder` AFTER `handlePaymentSuccess`.
-        // BUT the webhook might arrive BEFORE frontend does.
-        // And `preference/route.js` sets `external_reference`.
-        // The current webhook logic tries to find order by `mercadopagoPaymentId`.
-
-        // If order was created via Frontend after payment, it might have the payment ID.
-        // If order doesn't exist yet, we check...
-
+        // Search by mercadopagoPaymentId OR paymentDetails matches
         const order = await prisma.order.findFirst({
             where: {
                 OR: [
                     { mercadopagoPaymentId: paymentId.toString() },
+                    // Check if it's in the JSON paymentDetails
                     {
                         paymentDetails: {
                             path: ['paymentId'],
                             equals: paymentId.toString()
                         }
-                    }
-                ]
+                    },
+                    // Also check external_reference if available
+                    paymentInfo.external_reference ? {
+                        id: paymentInfo.external_reference // assumes external_reference IS the order ID
+                    } : undefined
+                ].filter(Boolean) // Remove undefined
             }
         });
 
         if (!order) {
             console.log('Order not found for payment ID:', paymentId);
-            // This is common if webhook arrives before Frontend creates order.
-            // We return 200 to acknowledge.
-            return NextResponse.json({ received: true }, { status: 200 });
+            // Return 200 because if we don't have the order, retrying probably won't help unless the order creation is delayed.
+            // If it IS delayed, 500/429 might be better, but standard practice is 200 if not found to avoid queue clogging, 
+            // unless we are sure it's a race condition.
+            // For now, return 200.
+            return NextResponse.json({ received: true, message: 'Order not found' }, { status: 200 });
         }
 
         // 4. Update Order Status
@@ -86,7 +96,12 @@ export async function POST(request) {
         let shouldDecrementStock = false;
         let shouldSendApprovedEmail = false;
 
-        switch (paymentInfo.status) {
+        const mpStatus = paymentInfo.status;
+        const mpStatusDetail = paymentInfo.status_detail;
+
+        console.log(`Processing Order ${order.id}. Current Status: ${order.status}. MP Status: ${mpStatus}`);
+
+        switch (mpStatus) {
             case 'approved':
                 if (order.status !== 'Pagado') {
                     newStatus = 'Pagado';
@@ -97,43 +112,61 @@ export async function POST(request) {
             case 'pending':
             case 'in_process':
             case 'in_mediation':
-                newStatus = 'Pendiente';
+                if (order.status !== 'Pagado' && order.status !== 'Cancelado') {
+                    newStatus = 'Pendiente'; // Or keep 'Procesando'
+                }
                 break;
             case 'rejected':
             case 'cancelled':
             case 'refunded':
             case 'charged_back':
-                newStatus = 'Cancelado';
+                if (order.status !== 'Pagado') {
+                    newStatus = 'Cancelado';
+                }
                 break;
             default:
-                console.log('Unknown payment status:', paymentInfo.status);
+                console.log('Unknown payment status:', mpStatus);
                 break;
         }
 
-        if (newStatus !== order.status) {
+        if (newStatus !== order.status || order.mercadopagoPaymentId !== paymentId.toString()) {
             const updatedOrder = await prisma.order.update({
                 where: { id: order.id },
                 data: {
                     status: newStatus,
-                    mpPaymentStatus: paymentInfo.status,
-                    mercadopagoPaymentId: paymentId.toString()
+                    mpPaymentStatus: mpStatus,
+                    mercadopagoPaymentId: paymentId.toString(),
+                    updatedAt: new Date() // Force update time
                 }
             });
 
             // Decrement Stock
             if (shouldDecrementStock) {
                 try {
+                    // Logic to decrement stock
+                    // Check if we have a decrement stock helper or API
+                    // The logic in previous reading called an API endpoint.
+                    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+                    /* 
+                       Calling own API from webhook is risky if auth needed or network issues. 
+                       Ideally, call a controller function directly.
+                       But reusing existing API call logic:
+                    */
                     const reservationIds = order.paymentDetails?.reservationIds || [];
                     if (reservationIds.length > 0) {
-                        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/stock/decrement`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ reservationIds })
-                        });
-                        console.log('Stock decremented successfully');
+                        try {
+                            await fetch(`${baseUrl}/api/stock/decrement`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reservationIds })
+                            });
+                            console.log('Stock decremented trigger sent.');
+                        } catch (err) {
+                            console.error("Failed to trigger stock decrement API", err);
+                        }
                     }
                 } catch (error) {
-                    console.error('Error decrementing stock:', error);
+                    console.error('Error decrementing stock logic:', error);
                 }
             }
 
@@ -143,31 +176,38 @@ export async function POST(request) {
                     await sendPaymentApproved({
                         ...updatedOrder,
                         items: updatedOrder.items,
-                        customerName: updatedOrder.customerName, // Ensure these fields exist on Order model or object
-                        customerEmail: updatedOrder.customerEmail || null
+                        customerName: updatedOrder.customerName,
+                        customerEmail: updatedOrder.customerEmail
                     });
+                    console.log('Payment approved email sent.');
                 } catch (error) {
                     console.error('Error sending payment approved email:', error);
                 }
             }
 
             // Log activity
-            await logActivity(
-                'payment_update',
-                `Pago ${paymentId} actualizado a ${paymentInfo.status} para orden ${order.id}`,
-                {
-                    orderId: order.id,
-                    paymentId,
-                    status: paymentInfo.status,
-                    newOrderStatus: newStatus
-                }
-            );
+            try {
+                await logActivity(
+                    'payment_update',
+                    `Pago ${paymentId} actualizado a ${mpStatus} para orden ${order.id}`,
+                    {
+                        orderId: order.id,
+                        paymentId,
+                        status: mpStatus,
+                        newOrderStatus: newStatus
+                    }
+                );
+            } catch (e) { console.error('Log activity failed', e) }
         }
 
         return NextResponse.json({ received: true, processed: true }, { status: 200 });
 
     } catch (error) {
-        console.error('Error processing webhook:', error);
-        return NextResponse.json({ received: true, error: error.message }, { status: 200 });
+        console.error('CRITICAL Error processing webhook:', error);
+        return NextResponse.json({
+            received: true,
+            error: 'Internal Server Error',
+            details: error instanceof Error ? error.message : String(error)
+        }, { status: 500 });
     }
 }
