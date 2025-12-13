@@ -10,8 +10,8 @@ export async function GET(request) {
         const state = url.searchParams.get('state');
 
         // 2. Validate State (CSRF)
-        const cookieStore = cookies();
-        const storedState = cookieStore.get('mp_oauth_state')?.value; // If cookies() is async in your version this might need await, but standard 13/14 is sync
+        const cookieStore = await cookies();
+        const storedState = cookieStore.get('mp_oauth_state')?.value;
 
         if (!code) {
             return NextResponse.json({ error: 'Missing code parameter' }, { status: 400 });
