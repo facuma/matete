@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
-export default function MercadoPagoBrick({ preferenceId, amount, onPaymentSuccess }) {
+export default function MercadoPagoBrick({ preferenceId, amount, onPaymentSuccess, publicKey }) {
     useEffect(() => {
-        initMercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY, {
-            locale: 'es-AR'
-        });
-    }, []);
+        if (publicKey) {
+            initMercadoPago(publicKey, {
+                locale: 'es-AR'
+            });
+        }
+    }, [publicKey]);
 
     const initialization = {
         preferenceId: preferenceId,

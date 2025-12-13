@@ -41,10 +41,11 @@ export default function CheckoutPage() {
         handleRemoveDiscount,
         appliedDiscount,
         discountError,
-        validatingDiscount
+        validatingDiscount,
+        mpConfig
     } = useCheckout();
 
-    const mpAvailable = !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+    const mpAvailable = !!mpConfig.publicKey;
 
     // Empty Cart State
     if (cart.length === 0) {
@@ -134,6 +135,7 @@ export default function CheckoutPage() {
                                 {selectedMethod === 'mercadopago' && preferenceId && (
                                     <MercadoPagoBrick
                                         preferenceId={preferenceId}
+                                        publicKey={mpConfig.publicKey}
                                         amount={100} // This should properly flow from hooks/context
                                         onPaymentSuccess={(pid, status) => createOrder(pid, status === 'approved' ? 'Pagado' : 'Pendiente', 'mercadopago')}
                                     />

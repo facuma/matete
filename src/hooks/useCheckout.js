@@ -32,6 +32,10 @@ export const useCheckout = () => {
     const [discountError, setDiscountError] = useState('');
     const [validatingDiscount, setValidatingDiscount] = useState(false);
 
+    // MP Config
+    const [mpConfig, setMpConfig] = useState({ publicKey: null, connected: false });
+
+
     // Load Data
     useEffect(() => {
         const savedData = localStorage.getItem('checkoutFormData');
@@ -42,6 +46,12 @@ export const useCheckout = () => {
             .then(res => res.json())
             .then(data => setTransferDiscount(data.discount || 0))
             .catch(err => console.error(err));
+
+        // Fetch MP Config
+        fetch('/api/mercadopago/config')
+            .then(res => res.json())
+            .then(data => setMpConfig(data))
+            .catch(err => console.error('Error loading MP config', err));
     }, []);
 
     useEffect(() => {
@@ -157,36 +167,22 @@ export const useCheckout = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    items: cart.map(item => ({
-                        id: String(item.product.id),
-                        title: item.product.name,
-                        quantity: Number(item.quantity),
-                        unit_price: Number(item.product.effectivePrice.amount), // Note: MP calculates total from unit * qty again? 
-                        // If we apply global discount, we might need to discount unit prices OR add a "discount line item"
-                        // Simplest for MP: send a "Discount" item with negative price OR adjust unit prices.
-                        // However, MP Preference total is what controls the charge amount usually if explicit?
-                        // Actually MP sums items. To apply discount we usually add an item with negative price.
-                        // Let's rely on standard practice: Adjusted Global amount is tricky in MP Items array.
-                        // Recommendation: Add a "Descuento" item.
-                        currency_id: 'ARS',
-                        picture_url: item.product.imageUrl
+                    // 1. Send Minimal Item Data for Calculation
+                    cartItems: cart.map(item => ({
+                        id: item.product.id,
+                        quantity: item.quantity,
+                        selectedOptions: item.selectedOptions // Assuming this is an array or object the backend can parse
                     })),
-                    // This total field in body might be ignored by MP preference creation if it relies on items.
-                    // IMPORTANT: We need to see how backend handles this.
-                    // Backend (likely) constructs preference from items.
-                    // IF appliedDiscount, we should probably pass it to backend to create the preference correctly.
-                    // BUT for now, let's pass `appliedDiscount` in the body so backend can handle it?
-                    // The backend at /api/mercadopago/preference likely just maps items.
-                    // I will pass `total` as override if backend implementation supports it?
-                    // Let's check backend if needed. For now assuming simple total override capability or we will fix MP later.
+                    // 2. Context Data
+                    discountCode: appliedDiscount?.code || null,
+                    shippingOptionId: selectedShipping?.id || null,
+                    // 3. User Data
                     payer: {
                         email: formData.email,
                         name: formData.name,
                         dni: formData.dni,
                         address: { street_name: formData.address, city: formData.city }
-                    },
-                    total, // Passing calculated total
-                    appliedDiscount // Passing discount info
+                    }
                 }),
             });
 
@@ -287,6 +283,9 @@ export const useCheckout = () => {
         handleRemoveDiscount,
         appliedDiscount,
         discountError,
-        validatingDiscount
+        appliedDiscount,
+        discountError,
+        validatingDiscount,
+        mpConfig
     };
 };
