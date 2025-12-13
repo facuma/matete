@@ -13,7 +13,7 @@ export async function GET(request) {
         const storedState = cookieStore.get('mp_oauth_state')?.value;
 
         if (!state || !storedState || state !== storedState) {
-            return NextResponse.json({ error: 'Invalid state parameter' }, { status: 400 });
+            return NextResponse.json({ error: 'Invalid state parameter or CSRF mismatch' }, { status: 400 });
         }
 
         // Delete state cookie
@@ -32,10 +32,10 @@ export async function GET(request) {
         const response = await fetch(tokenUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({
+            body: new URLSearchParams({
                 client_secret: clientSecret,
                 client_id: clientId,
                 grant_type: 'authorization_code',
@@ -46,6 +46,7 @@ export async function GET(request) {
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('MP Token Exchange Error:', errorData);
             return NextResponse.json({ error: 'Failed to exchange token', details: errorData }, { status: 500 });
         }
 

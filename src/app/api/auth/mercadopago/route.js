@@ -51,7 +51,7 @@ export async function POST(request) {
             redirect_uri: redirectUri
         });
 
-        const authUrl = `https://auth.mercadopago.com/authorization?${params.toString()}`;
+        const authUrl = `https://auth.mercadopago.com.ar/authorization?${params.toString()}`;
 
         // Return URL and set cookie for state validation
         const response = NextResponse.json({ url: authUrl });
