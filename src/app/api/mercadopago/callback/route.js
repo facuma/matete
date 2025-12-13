@@ -4,9 +4,11 @@ import { cookies } from "next/headers";
 
 export async function GET(request) {
     try {
-        const code = request.nextUrl.searchParams.get("code");
-        const state = request.nextUrl.searchParams.get("state");
-        const error = request.nextUrl.searchParams.get("error");
+        // 1. Parsing - Use standard URL parsing for maximum compatibility
+        const url = new URL(request.url);
+        const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state");
+        const error = url.searchParams.get("error");
 
         if (error) {
             return NextResponse.json(
@@ -20,7 +22,7 @@ export async function GET(request) {
         }
 
         // 🔐 Validar state + PKCE verifier
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const storedState = cookieStore.get("mp_oauth_state")?.value;
         const verifier = cookieStore.get("mp_oauth_verifier")?.value;
 
@@ -33,8 +35,7 @@ export async function GET(request) {
         }
 
         // limpiar cookies
-        cookieStore.set("mp_oauth_state", "", { path: "/", maxAge: 0 });
-        cookieStore.set("mp_oauth_verifier", "", { path: "/", maxAge: 0 });
+        // We will clear cookies on the response object later
 
         // 🔑 env vars correctas
         const clientId = process.env.MP_CLIENT_ID;
@@ -91,7 +92,13 @@ export async function GET(request) {
             request.headers.get("origin") ||
             "http://localhost:3000";
 
-        return NextResponse.redirect(`${baseUrl}/admin/settings/payments?status=connected`);
+        const nextResponse = NextResponse.redirect(`${baseUrl}/admin/settings/payments?status=connected`);
+
+        // Correctly delete cookies on the response
+        nextResponse.cookies.delete('mp_oauth_state');
+        nextResponse.cookies.delete('mp_oauth_verifier');
+
+        return nextResponse;
     } catch (err) {
         console.error("OAuth Callback Error:", err);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
